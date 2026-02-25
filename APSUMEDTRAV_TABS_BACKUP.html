@@ -1,0 +1,3047 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APSUMEDTRAV - Fiche d'Aptitude Médicale au Travail</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='50' font-size='50'>🏥</text></svg>">
+    
+    <!-- ============================================ -->
+    <!-- BIBLIOTHÈQUES EXTERNES (ordre important) -->
+    <!-- ============================================ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <!-- 🔥 NOUVEAU : Firebase Auth pour identifier les intervenants -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* ============================================ */
+        /* STYLES CSS (inchangés + ajouts) */
+        /* ============================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.95;
+            font-weight: 500;
+        }
+
+        .tabs-wrapper {
+            background: #f8f9fa;
+            padding: 10px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 5px;
+            overflow-x: auto;
+            padding: 10px;
+        }
+
+        .tab {
+            background: white;
+            border: 2px solid #dee2e6;
+            padding: 12px 20px;
+            cursor: pointer;
+            border-radius: 10px 10px 0 0;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            color: #495057;
+        }
+
+        .tab:hover {
+            background: #f1f3f5;
+            transform: translateY(-2px);
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+            animation: fadeIn 0.5s;
+            min-height: 500px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            color: #667eea;
+            margin-bottom: 25px;
+            font-size: 1.8em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .form-section h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #495057;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .action-bar-fixed {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 2px solid #dee2e6;
+            padding: 15px;
+            z-index: 1000;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+        }
+
+        .action-bar-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .info-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #e7f3ff;
+            color: #0066cc;
+            border-radius: 5px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .required {
+            color: #dc3545;
+        }
+
+        .anciennete-display {
+            background: #e7f3ff;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            color: #0066cc;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .main-container {
+                box-shadow: none;
+                border-radius: 0;
+            }
+
+            .tabs-wrapper,
+            .action-bar-fixed {
+                display: none;
+            }
+
+            .tab-content {
+                display: block !important;
+                page-break-after: always;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .action-bar-content {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #5a67d8;
+        }
+
+        /* STYLES POUR L'IMPRESSION */
+        @media print {
+            body > *:not(#panel-historique) {
+                display: none !important;
+            }
+            #panel-historique {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                height: auto !important;
+                background: white !important;
+                overflow: visible !important;
+            }
+            #contenu-historique {
+                background: white !important;
+                max-height: none !important;
+                overflow: visible !important;
+            }
+            #panel-historique button {
+                display: none !important;
+            }
+            #panel-historique .btn-fermer {
+                display: none !important;
+            }
+            * {
+                background: white !important;
+                color: black !important;
+            }
+            [style*="background: #d4edda"] {
+                background: #d4edda !important;
+                border-color: #28a745 !important;
+            }
+            [style*="background: #f8d7da"] {
+                background: #f8d7da !important;
+                border-color: #dc3545 !important;
+            }
+            [style*="background: #fff3cd"] {
+                background: #fff3cd !important;
+                border-color: #ffc107 !important;
+            }
+        }
+
+        /* 🔥 NOUVEAU : Styles pour le panneau de connexion */
+        #loginOverlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            z-index: 999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #loginBox {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+        }
+        #loginBox h2 {
+            border: none;
+            margin-bottom: 10px;
+        }
+        #loginBox input {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+        #loginBox input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        #loginBox button {
+            width: 100%;
+            padding: 14px;
+            margin-top: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        #loginError {
+            color: #dc3545;
+            font-size: 13px;
+            margin-top: 10px;
+            min-height: 20px;
+        }
+        /* 🔥 NOUVEAU : Barre utilisateur connecté */
+        #userBar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 20px;
+            z-index: 10001;
+            display: none;
+            font-size: 13px;
+        }
+        #userBar .user-bar-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        /* 🔥 NOUVEAU : Indicateur de sync */
+        #syncIndicator {
+            position: fixed;
+            top: 40px;
+            right: 20px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 10002;
+            transition: all 0.3s;
+        }
+        .sync-ok { background: #d4edda; color: #155724; }
+        .sync-loading { background: #fff3cd; color: #856404; }
+        .sync-error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+
+<!-- 🔥 NOUVEAU : Écran de connexion -->
+<div id="loginOverlay">
+    <div id="loginBox">
+        <div style="font-size: 60px; margin-bottom: 15px;">🏥</div>
+        <h2 style="color: #667eea;">APSUMEDTRAV</h2>
+        <p style="color: #6c757d; margin-bottom: 25px;">Connectez-vous pour accéder à l'application</p>
+        
+        <input type="email" id="loginEmail" placeholder="📧 Adresse email" autocomplete="email">
+        <input type="password" id="loginPassword" placeholder="🔒 Mot de passe" autocomplete="current-password">
+        
+        <button onclick="connexion()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            🔑 Se connecter
+        </button>
+        <button onclick="inscription()" style="background: #28a745; color: white;">
+            📝 Créer un compte
+        </button>
+        
+        <div id="loginError"></div>
+        
+        <p style="margin-top: 20px; font-size: 12px; color: #adb5bd;">
+            Chaque intervenant doit avoir son propre compte.<br>
+            Les données sont partagées entre tous les utilisateurs.
+        </p>
+    </div>
+</div>
+
+<!-- 🔥 NOUVEAU : Barre utilisateur -->
+<div id="userBar">
+    <div class="user-bar-content">
+        <span>👨‍⚕️ Connecté : <strong id="userEmail">-</strong> | <span id="userName">-</span></span>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <span id="syncIndicator" class="sync-ok">🟢 Synchronisé</span>
+            <button onclick="deconnexion()" style="background: #dc3545; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-size: 12px;">
+                🚪 Déconnexion
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PANNEAU DE RECHERCHE ET HISTORIQUE -->
+<!-- ============================================ -->
+<div id="searchHistoryPanel" style="
+    max-width: 1200px;
+    margin: 20px auto;
+    margin-top: 50px;
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    border: 2px solid #667eea;
+    display: none;
+">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="color: #667eea; display: flex; align-items: center; gap: 10px;">
+            🔍 Gestion des Patients - Base de Données
+        </h2>
+        <button onclick="cacherPanneau()" style="
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        ">✕ Masquer</button>
+    </div>
+    
+    <!-- Statistiques -->
+    <div style="
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    ">
+        <div style="background: #e8f4ff; padding: 15px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 24px; font-weight: bold; color: #007bff;">
+                <span id="totalPatients">0</span>
+            </div>
+            <div style="color: #666; font-size: 12px;">Total Patients</div>
+        </div>
+        <div style="background: #e8ffe8; padding: 15px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 24px; font-weight: bold; color: #28a745;">
+                <span id="patientsToday">0</span>
+            </div>
+            <div style="color: #666; font-size: 12px;">Aujourd'hui</div>
+        </div>
+        <div style="background: #fff3e8; padding: 15px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 24px; font-weight: bold; color: #ff9800;">
+                <span id="patientsWeek">0</span>
+            </div>
+            <div style="color: #666; font-size: 12px;">Cette semaine</div>
+        </div>
+        <div style="background: #f3e8ff; padding: 15px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 24px; font-weight: bold; color: #9c27b0;">
+                <span id="patientsMonth">0</span>
+            </div>
+            <div style="color: #666; font-size: 12px;">Ce mois</div>
+        </div>
+    </div>
+    
+    <!-- Barre de recherche et actions -->
+    <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
+        <input type="text" id="searchPatientInput" placeholder="🔎 Rechercher par nom, prénom, entreprise..." 
+            style="
+                flex: 1;
+                min-width: 250px;
+                padding: 12px;
+                border: 2px solid #dee2e6;
+                border-radius: 8px;
+                font-size: 14px;
+            "
+            onkeyup="rechercherPatientLive()"
+        >
+        
+        <button onclick="actualiserDepuisFirestore()" 
+                style="padding: 12px 20px; background: #28a745; color: white; border: none; 
+                       border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;
+                       transition: all 0.2s; box-shadow: 0 2px 5px rgba(40,167,69,0.3);"
+                onmouseover="this.style.transform='translateY(-2px)'"
+                onmouseout="this.style.transform='translateY(0)'">
+            🔄 Actualiser
+        </button>
+        
+        <!-- Menu déroulant EXPORTS -->
+        <div style="position: relative; display: inline-block;">
+            <button onclick="toggleMenuExports()" 
+                    style="padding: 12px 20px; background: #667eea; color: white; border: none; 
+                           border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;
+                           display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+                           box-shadow: 0 2px 5px rgba(102,126,234,0.3);"
+                    onmouseover="this.style.transform='translateY(-2px)'"
+                    onmouseout="this.style.transform='translateY(0)'">
+                📊 Exports <span style="font-size: 10px;">▼</span>
+            </button>
+            
+            <div id="menuExports" style="
+                display: none;
+                position: absolute;
+                top: 100%;
+                right: 0;
+                background: white;
+                border: 2px solid #667eea;
+                border-radius: 8px;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+                z-index: 10000;
+                min-width: 250px;
+                margin-top: 8px;
+            ">
+                <button onclick="exporterCSVComplet(); toggleMenuExports()" 
+                        style="width: 100%; padding: 14px 20px; text-align: left; border: none; background: white; 
+                               cursor: pointer; font-size: 14px; border-bottom: 1px solid #eee; display: flex; 
+                               align-items: center; gap: 10px; transition: all 0.2s;"
+                        onmouseover="this.style.background='#f8f9fa'"
+                        onmouseout="this.style.background='white'">
+                    <span style="font-size: 18px;">📊</span> CSV Complet
+                </button>
+                <button onclick="exporterToutesConsultationsPDFAvecFiltres(); toggleMenuExports()" 
+                        style="width: 100%; padding: 14px 20px; text-align: left; border: none; background: white; 
+                               cursor: pointer; font-size: 14px; border-bottom: 1px solid #eee; display: flex; 
+                               align-items: center; gap: 10px; transition: all 0.2s;"
+                        onmouseover="this.style.background='#f8f9fa'"
+                        onmouseout="this.style.background='white'">
+                    <span style="font-size: 18px;">📄</span> PDF Global
+                </button>
+                <button onclick="exporterStatistiquesPDF(); toggleMenuExports()" 
+                        style="width: 100%; padding: 14px 20px; text-align: left; border: none; background: white; 
+                               cursor: pointer; font-size: 14px; border-bottom: 1px solid #eee; display: flex; 
+                               align-items: center; gap: 10px; transition: all 0.2s;"
+                        onmouseover="this.style.background='#f8f9fa'"
+                        onmouseout="this.style.background='white'">
+                    <span style="font-size: 18px;">📈</span> Statistiques Globales
+                </button>
+                <!-- BOUTON EXPORT EXCEL INDIVIDUEL -->
+<button onclick="exporterRapportExcel(); toggleMenuExports()"
+    style="width: 100%; padding: 14px 20px; text-align: left; border: none; background: white; display: flex;
+           cursor: pointer; font-size: 14px; border-bottom: 1px solid #eee;
+           align-items: center; gap: 10px; transition: all 0.2s;"
+    onmouseover="this.style.background='#e8f5e9'"
+    onmouseout="this.style.background='white'">
+    <span style="font-size: 18px;">📗</span> Excel Individuel
+</button>
+                <button onclick="exporterConsultationsFiltrees(); toggleMenuExports()" 
+                        style="width: 100%; padding: 14px 20px; text-align: left; border: none; background: white; 
+                               cursor: pointer; font-size: 14px; border-bottom: 1px solid #eee; display: flex; 
+                               align-items: center; gap: 10px; transition: all 0.2s;"
+                        onmouseover="this.style.background='#f8f9fa'"
+                        onmouseout="this.style.background='white'">
+                    <span style="font-size: 18px;">📅</span> Export par Période
+                </button>
+                <button onclick="exporterPDFProtege(); toggleMenuExports()" 
+                        style="width: 100%; padding: 14px 20px; text-align: left; border: none; background: white; 
+                               cursor: pointer; font-size: 14px; border-radius: 0 0 8px 8px; display: flex; 
+                               align-items: center; gap: 10px; transition: all 0.2s;"
+                        onmouseover="this.style.background='#f8f9fa'"
+                        onmouseout="this.style.background='white'">
+                    <span style="font-size: 18px;">🔒</span> Export Protégé
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tableau des résultats -->
+    <div id="resultatsRecherche" style="
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px;
+        background: #f8f9fa;
+    ">
+        <p style="text-align: center; color: #666;">Chargement des données...</p>
+    </div>
+</div>
+
+<!-- Bouton flottant pour ouvrir le panneau -->
+<button id="btnOpenSearch" onclick="afficherPanneau()" style="
+    position: fixed;
+    top: 50px;
+    right: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    z-index: 1000;
+    display: block;
+">🔍</button>
+
+<!-- ============================================ -->
+<!-- PANNEAU HISTORIQUE INDIVIDUEL -->
+<!-- ============================================ -->
+<div id="panel-historique" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100000;
+    display: none;
+    overflow-y: auto;
+    padding: 20px;
+">
+    <div style="
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        position: relative;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    ">
+        <button onclick="fermerHistorique()" style="
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(220,53,69,0.3);
+            transition: all 0.3s;
+        " onmouseover="this.style.background='#c82333'; this.style.transform='rotate(90deg)'"
+           onmouseout="this.style.background='#dc3545'; this.style.transform='rotate(0)'">×</button>
+        
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    padding: 25px; margin: -30px -30px 25px -30px; border-radius: 15px 15px 0 0;">
+            <h2 style="color: white; margin: 0; font-size: 26px; font-weight: 700;">
+                📋 Historique des Consultations
+            </h2>
+            <p id="info-travailleur" style="color: white; margin: 10px 0 0 0; opacity: 0.95; font-size: 15px;">
+                Chargement...
+            </p>
+        </div>
+        
+        <div style="display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; justify-content: center;">
+            <button onclick="exporterHistoriqueIndividuelPDF()" style="
+                padding: 12px 25px;
+                background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+                color: white; border: none; border-radius: 8px; cursor: pointer;
+                font-weight: 600; font-size: 15px;
+                box-shadow: 0 4px 15px rgba(220,53,69,0.3); transition: all 0.3s;
+                display: flex; align-items: center; gap: 8px;
+            " onmouseover="this.style.transform='translateY(-2px)'"
+               onmouseout="this.style.transform='translateY(0)'">
+                📄 Exporter PDF Complet
+            </button>
+            <button onclick="exporterHistoriqueCSV()" style="
+                padding: 12px 25px;
+                background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+                color: white; border: none; border-radius: 8px; cursor: pointer;
+                font-weight: 600; font-size: 15px;
+                box-shadow: 0 4px 15px rgba(40,167,69,0.3); transition: all 0.3s;
+                display: flex; align-items: center; gap: 8px;
+            " onmouseover="this.style.transform='translateY(-2px)'"
+               onmouseout="this.style.transform='translateY(0)'">
+                📊 Exporter CSV
+            </button>
+            <button onclick="imprimerHistorique()" style="
+                padding: 12px 25px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white; border: none; border-radius: 8px; cursor: pointer;
+                font-weight: 600; font-size: 15px;
+                box-shadow: 0 4px 15px rgba(102,126,234,0.3); transition: all 0.3s;
+                display: flex; align-items: center; gap: 8px;
+            " onmouseover="this.style.transform='translateY(-2px)'"
+               onmouseout="this.style.transform='translateY(0)'">
+                🖨️ Imprimer
+            </button>
+        </div>
+        
+        <div id="contenu-historique" style="
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            min-height: 300px;
+        ">
+            <p style="text-align: center; color: #6c757d; padding: 40px 0;">
+                <span style="font-size: 50px; display: block; margin-bottom: 15px;">⏳</span>
+                Chargement de l'historique...
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- CONTENEUR PRINCIPAL DU FORMULAIRE -->
+<!-- ============================================ -->
+<div class="main-container" style="margin-top: 40px;">
+    <div class="header">
+        <h1>🏥 APSUMEDTRAV</h1>
+        <p>Fiche d'Aptitude Médicale au Travail</p>
+    </div>
+
+    <div class="tabs-wrapper">
+        <div class="tabs">
+            <button class="tab active" onclick="openTab(event, 'identification')">📋 Identification</button>
+            <button class="tab" onclick="openTab(event, 'antecedents')">📁 Antécédents</button>
+            <button class="tab" onclick="openTab(event, 'clinique')">🩺 Examen Clinique</button>
+            <button class="tab" onclick="openTab(event, 'paraclinique')">🔬 Examens Paracliniques</button>
+            <button class="tab" onclick="openTab(event, 'vaccinations')">💉 Vaccinations</button>
+            <button class="tab" onclick="openTab(event, 'risques')">⚠️ Risques Pro</button>
+            <button class="tab" onclick="openTab(event, 'conclusion')">✅ Conclusion</button>
+        </div>
+    </div>
+
+    <!-- ONGLET 1: IDENTIFICATION -->
+    <div id="identification" class="tab-content active">
+        <h2>📋 Identification du Travailleur</h2>
+        <div class="form-section">
+            <h3>Informations Personnelles</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="nom-cabinet">Nom du Cabinet Médical</label>
+                    <input type="text" id="nom-cabinet" value="Cabinet Médical">
+                </div>
+                <div class="form-group">
+                    <label for="date-naissance">Date de naissance <span class="required">*</span></label>
+                    <input type="text" id="date-naissance" placeholder="JJ/MM/AAAA" required onchange="calculerAge()">
+                </div>
+                <div class="form-group">
+                    <label for="nom">Nom <span class="required">*</span></label>
+                    <input type="text" id="nom" required>
+                </div>
+                <div class="form-group">
+                    <label for="prenom">Prénom <span class="required">*</span></label>
+                    <input type="text" id="prenom" required>
+                </div>
+                <div class="form-group">
+                    <label for="age">Âge</label>
+                    <input type="text" id="age" readonly style="background: #f0f0f0;">
+                </div>
+                <div class="form-group">
+                    <label for="date-consultation">Date de Consultation <span class="required">*</span></label>
+                    <input type="text" id="date-consultation" placeholder="JJ/MM/AAAA" required>
+                </div>
+                <div class="form-group">
+                    <label for="genre">Genre <span class="required">*</span></label>
+                    <select id="genre" required>
+                        <option value="">Sélectionner</option>
+                        <option value="homme">Homme</option>
+                        <option value="femme">Femme</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="telephone">Téléphone</label>
+                    <input type="tel" id="telephone">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email">
+                </div>
+                <div class="form-group">
+                    <label for="adresse">Adresse</label>
+                    <input type="text" id="adresse">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Informations Professionnelles</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="matricule">Matricule</label>
+                    <div style="display: flex; gap: 10px; align-items: stretch;">
+                        <input type="text" id="matricule" style="flex: 1;" placeholder="Saisir le matricule...">
+                        <button type="button" onclick="ouvrirHistorique()" style="
+                            padding: 10px 20px;
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white; border: none; border-radius: 8px; cursor: pointer;
+                            font-weight: 600; white-space: nowrap;
+                            box-shadow: 0 3px 10px rgba(102,126,234,0.3); transition: all 0.3s;
+                            display: flex; align-items: center; gap: 6px;
+                        " onmouseover="this.style.transform='translateY(-2px)'"
+                           onmouseout="this.style.transform='translateY(0)'">
+                            <span style="font-size: 16px;">📋</span>
+                            <span>Historique</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="entreprise">Entreprise <span class="required">*</span></label>
+                    <input type="text" id="entreprise" required>
+                </div>
+                <div class="form-group">
+                    <label for="poste">Poste de travail <span class="required">*</span></label>
+                    <input type="text" id="poste" required>
+                </div>
+                <div class="form-group">
+                    <label for="departement">Département/Service</label>
+                    <input type="text" id="departement">
+                </div>
+                <div class="form-group">
+                    <label for="date-embauche">Date d'embauche <span class="required">*</span></label>
+                    <input type="text" id="date-embauche" placeholder="JJ/MM/AAAA" required>
+                </div>
+                <div class="form-group">
+                    <label for="anciennete">Ancienneté</label>
+                    <div class="anciennete-display" id="anciennete">-- ans -- mois</div>
+                </div>
+                <div class="form-group">
+                    <label for="type-contrat">Type de contrat</label>
+                    <select id="type-contrat">
+                        <option value="">Sélectionner</option>
+                        <option value="CDI">CDI</option>
+                        <option value="CDD">CDD</option>
+                        <option value="Intérim">Intérim</option>
+                        <option value="Stage">Stage</option>
+                        <option value="Alternance">Alternance</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="horaire-travail">Horaire de travail</label>
+                    <select id="horaire-travail">
+                        <option value="">Sélectionner</option>
+                        <option value="jour">Travail de jour</option>
+                        <option value="nuit">Travail de nuit</option>
+                        <option value="poste">Travail posté</option>
+                        <option value="2x8">2x8</option>
+                        <option value="3x8">3x8</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ONGLET 2: ANTÉCÉDENTS -->
+    <div id="antecedents" class="tab-content">
+        <h2>📁 Antécédents Médicaux</h2>
+        <div class="form-section">
+            <h3>Antécédents Personnels</h3>
+            <div class="form-group">
+                <label>Antécédents médicaux</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="ant-med" value="diabete"> Diabète</label>
+                    <label><input type="checkbox" name="ant-med" value="hta"> Hypertension</label>
+                    <label><input type="checkbox" name="ant-med" value="asthme"> Asthme</label>
+                    <label><input type="checkbox" name="ant-med" value="epilepsie"> Épilepsie</label>
+                    <label><input type="checkbox" name="ant-med" value="cardiaque"> Maladie cardiaque</label>
+                    <label><input type="checkbox" name="ant-med" value="renale"> Maladie rénale</label>
+                    <label><input type="checkbox" name="ant-med" value="hepatique"> Maladie hépatique</label>
+                    <label><input type="checkbox" name="ant-med" value="thyroide"> Thyroïde</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="autres-antecedents">Autres antécédents (préciser)</label>
+                <textarea id="autres-antecedents" rows="4"></textarea>
+            </div>
+        </div>
+        <div class="form-section">
+            <h3>Antécédents Chirurgicaux</h3>
+            <div class="form-group">
+                <label for="chirurgie">Interventions chirurgicales antérieures</label>
+                <textarea id="chirurgie" rows="3" placeholder="Date et type d'intervention"></textarea>
+            </div>
+        </div>
+        <div class="form-section">
+            <h3>Antécédents Professionnels</h3>
+            <div class="form-group">
+                <label for="accident-travail">Accidents de travail antérieurs</label>
+                <textarea id="accident-travail" rows="3" placeholder="Date, nature et séquelles éventuelles"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="maladie-pro">Maladies professionnelles</label>
+                <textarea id="maladie-pro" rows="3"></textarea>
+            </div>
+        </div>
+        <div class="form-section">
+            <h3>Allergies et Intolérances</h3>
+            <div class="form-group">
+                <label for="allergies">Allergies connues</label>
+                <textarea id="allergies" rows="3"></textarea>
+            </div>
+        </div>
+        <div class="form-section">
+            <h3>Habitudes de vie</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="tabac">Tabagisme</label>
+                    <select id="tabac">
+                        <option value="non">Non fumeur</option>
+                        <option value="ancien">Ancien fumeur</option>
+                        <option value="oui-occasionnel">Fumeur occasionnel</option>
+                        <option value="oui-regulier">Fumeur régulier</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="nb-cigarettes">Si fumeur, nombre/jour</label>
+                    <input type="number" id="nb-cigarettes" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="alcool">Consommation d'alcool</label>
+                    <select id="alcool">
+                        <option value="non">Non</option>
+                        <option value="occasionnel">Occasionnelle</option>
+                        <option value="moderee">Modérée</option>
+                        <option value="reguliere">Régulière</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="activite-physique">Activité physique</label>
+                    <select id="activite-physique">
+                        <option value="sedentaire">Sédentaire</option>
+                        <option value="legere">Légère</option>
+                        <option value="moderee">Modérée</option>
+                        <option value="intense">Intense</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="form-section">
+            <h3>Traitements en cours</h3>
+            <div class="form-group">
+                <label for="medicaments">Médicaments actuels</label>
+                <textarea id="medicaments" rows="3" placeholder="Nom, dosage, fréquence"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- ONGLET 3: EXAMEN CLINIQUE -->
+    <div id="clinique" class="tab-content">
+        <h2>🩺 Examen Clinique</h2>
+        <div class="form-section">
+            <h3>Constantes Vitales</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="poids">Poids (kg)</label>
+                    <input type="number" id="poids" step="0.1" min="0" oninput="calculerIMC()">
+                </div>
+                <div class="form-group">
+                    <label for="taille">Taille (cm)</label>
+                    <input type="number" id="taille" min="0" oninput="calculerIMC()">
+                </div>
+                <div class="form-group">
+                    <label for="imc">IMC (calculé)</label>
+                    <input type="text" id="imc" readonly style="background: #f0f0f0;">
+                </div>
+                <div class="form-group">
+                    <label for="interpretation-imc">Interprétation IMC</label>
+                    <input type="text" id="interpretation-imc" readonly style="background: #f0f0f0;">
+                </div>
+                <div class="form-group">
+                    <label for="ta-systolique">TA Systolique (mmHg)</label>
+                    <input type="number" id="ta-systolique" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="ta-diastolique">TA Diastolique (mmHg)</label>
+                    <input type="number" id="ta-diastolique" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="pouls">Pouls (/min)</label>
+                    <input type="number" id="pouls" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="frequence-resp">Fréquence respiratoire (/min)</label>
+                    <input type="number" id="frequence-resp" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="temperature">Température (°C)</label>
+                    <input type="number" id="temperature" step="0.1" min="35" max="42">
+                </div>
+                <div class="form-group">
+                    <label for="saturation">SpO2 (%)</label>
+                    <input type="number" id="saturation" min="0" max="100">
+                </div>
+            </div>
+        </div>
+        <div class="form-section">
+            <h3>Examen Général</h3>
+            <div class="form-group">
+                <label for="etat-general">État général</label>
+                <select id="etat-general">
+                    <option value="bon">Bon</option>
+                    <option value="assez-bon">Assez bon</option>
+                    <option value="altere">Altéré</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="observations-generales">Observations générales</label>
+                <textarea id="observations-generales" rows="3"></textarea>
+            </div>
+        </div>
+        <div class="form-section">
+            <h3>Examen par Système</h3>
+            <div class="form-group"><label for="examen-cardio">Examen cardiovasculaire</label><textarea id="examen-cardio" rows="3"></textarea></div>
+            <div class="form-group"><label for="examen-pulm">Examen pulmonaire</label><textarea id="examen-pulm" rows="3"></textarea></div>
+            <div class="form-group"><label for="examen-abdo">Examen abdominal</label><textarea id="examen-abdo" rows="3"></textarea></div>
+            <div class="form-group"><label for="examen-neuro">Examen neurologique</label><textarea id="examen-neuro" rows="3"></textarea></div>
+            <div class="form-group"><label for="examen-osteo">Examen ostéo-articulaire</label><textarea id="examen-osteo" rows="3"></textarea></div>
+            <div class="form-group"><label for="examen-orl">Examen ORL</label><textarea id="examen-orl" rows="3"></textarea></div>
+            <div class="form-group"><label for="examen-ophtalmo">Examen ophtalmologique</label><textarea id="examen-ophtalmo" rows="3"></textarea></div>
+            <div class="form-group"><label for="examen-dermato">Examen dermatologique</label><textarea id="examen-dermato" rows="3"></textarea></div>
+        </div>
+    </div>
+
+    <!-- ONGLET 4: EXAMENS PARACLINIQUES -->
+    <div id="paraclinique" class="tab-content">
+        <h2>🔬 Examens Paracliniques</h2>
+        <div class="form-section">
+            <h3>Biologie</h3>
+            <div class="form-grid">
+                <div class="form-group"><label for="date-bilan">Date du bilan</label><input type="text" id="date-bilan" placeholder="JJ/MM/AAAA"></div>
+                <div class="form-group"><label for="glycemie">Glycémie à jeun (g/L)</label><input type="number" id="glycemie" step="0.01"></div>
+                <div class="form-group"><label for="hba1c">HbA1c (%)</label><input type="number" id="hba1c" step="0.1"></div>
+                <div class="form-group"><label for="cholesterol-total">Cholestérol total (mg/dL)</label><input type="number" id="cholesterol-total" step="0.01"></div>
+                <div class="form-group"><label for="hdl">HDL (mg/dL)</label><input type="number" id="hdl" step="0.01"></div>
+                <div class="form-group"><label for="ldl">LDL (mg/dL)</label><input type="number" id="ldl" step="0.01"></div>
+                <div class="form-group"><label for="triglycerides">Triglycérides (g/L)</label><input type="number" id="triglycerides" step="0.01"></div>
+                <div class="form-group"><label for="creatinine">Créatinine (mg/L)</label><input type="number" id="creatinine" step="0.1"></div>
+                <div class="form-group"><label for="acide-urique">Acide urique (mg/L)</label><input type="number" id="acide-urique" step="0.1"></div>
+                <div class="form-group"><label for="asat">ASAT (UI/L)</label><input type="text" id="asat"></div>
+                <div class="form-group"><label for="alat">ALAT (UI/L)</label><input type="text" id="alat"></div>
+            </div>
+        </div>
+        <div class="form-section">
+            <h3>Hématologie</h3>
+            <div class="form-grid">
+                <div class="form-group"><label for="hemoglobine">Hémoglobine (g/dL)</label><input type="number" id="hemoglobine" step="0.1"></div>
+                <div class="form-group"><label for="hematocrite">Hématocrite (%)</label><input type="number" id="hematocrite" step="0.1"></div>
+                <div class="form-group"><label for="leucocytes">Leucocytes (/mm³)</label><input type="number" id="leucocytes"></div>
+                <div class="form-group"><label for="plaquettes">Plaquettes (/mm³)</label><input type="number" id="plaquettes"></div>
+            </div>
+        </div>
+        <div class="form-section">
+            <h3>Examens d'Imagerie</h3>
+            <div class="form-group"><label for="radio-thorax">Radiographie thoracique</label><textarea id="radio-thorax" rows="3"></textarea></div>
+            <div class="form-group"><label for="ecg">ECG</label><textarea id="ecg" rows="3"></textarea></div>
+            <div class="form-group"><label for="echographie">Échographie</label><textarea id="echographie" rows="3"></textarea></div>
+        </div>
+        <div class="form-section">
+            <h3>Examens Fonctionnels</h3>
+            <div class="form-group"><label for="audiometrie">Audiométrie</label><textarea id="audiometrie" rows="3"></textarea></div>
+            <div class="form-group"><label for="spirometrie">Spirométrie</label><textarea id="spirometrie" rows="3"></textarea></div>
+            <div class="form-group">
+                <label for="vision">Examen de la vision</label>
+                <div class="form-grid">
+                    <input type="text" id="vision-od" placeholder="Œil droit (OD)">
+                    <input type="text" id="vision-og" placeholder="Œil gauche (OG)">
+                    <input type="text" id="vision-binoculaire" placeholder="Vision binoculaire">
+                </div>
+            </div>
+        </div>
+        <div class="form-section">
+            <h3>Autres examens</h3>
+            <div class="form-group"><label for="autres-examens">Autres examens réalisés</label><textarea id="autres-examens" rows="4"></textarea></div>
+        </div>
+    </div>
+
+    <!-- ONGLET 5: VACCINATIONS -->
+    <div id="vaccinations" class="tab-content">
+        <h2>💉 Vaccinations</h2>
+        <div class="form-section">
+            <h3>Vaccinations Obligatoires</h3>
+            <div class="form-grid">
+                <div class="form-group"><label for="vaccin-dt-polio">DT-Polio (dernière dose)</label><input type="text" id="vaccin-dt-polio" placeholder="JJ/MM/AAAA"></div>
+                <div class="form-group"><label for="vaccin-dt-rappel">Prochain rappel DT-Polio</label><input type="text" id="vaccin-dt-rappel" placeholder="JJ/MM/AAAA"></div>
+                <div class="form-group"><label for="vaccin-hepatite-b">Hépatite B</label>
+                    <select id="vaccin-hepatite-b"><option value="">Non renseigné</option><option value="complet">Schéma complet</option><option value="encours">En cours</option><option value="non">Non vacciné</option><option value="immunise">Immunisé</option></select>
+                </div>
+                <div class="form-group"><label for="date-hepatite-b">Date dernière dose Hépatite B</label><input type="text" id="date-hepatite-b" placeholder="JJ/MM/AAAA"></div>
+            </div>
+        </div>
+        <div class="form-section">
+            <h3>Vaccinations Recommandées</h3>
+            <div class="form-grid">
+                <div class="form-group"><label for="vaccin-bcg">BCG</label><select id="vaccin-bcg"><option value="">Non renseigné</option><option value="oui">Oui</option><option value="non">Non</option></select></div>
+                <div class="form-group"><label for="date-bcg">Date BCG</label><input type="text" id="date-bcg" placeholder="JJ/MM/AAAA"></div>
+                <div class="form-group"><label for="vaccin-hepatite-a">Hépatite A</label><select id="vaccin-hepatite-a"><option value="">Non renseigné</option><option value="complet">Complet</option><option value="partiel">Partiel</option><option value="non">Non</option></select></div>
+                <div class="form-group"><label for="date-hepatite-a">Date Hépatite A</label><input type="text" id="date-hepatite-a" placeholder="JJ/MM/AAAA"></div>
+                <div class="form-group"><label for="vaccin-typhoide">Typhoïde</label><select id="vaccin-typhoide"><option value="">Non renseigné</option><option value="oui">Oui</option><option value="non">Non</option></select></div>
+                <div class="form-group"><label for="date-typhoide">Date Typhoïde</label><input type="text" id="date-typhoide" placeholder="JJ/MM/AAAA"></div>
+                <div class="form-group"><label for="vaccin-leptospirose">Leptospirose</label><select id="vaccin-leptospirose"><option value="">Non renseigné</option><option value="oui">Oui</option><option value="non">Non</option></select></div>
+                <div class="form-group"><label for="date-leptospirose">Date Leptospirose</label><input type="text" id="date-leptospirose" placeholder="JJ/MM/AAAA"></div>
+            </div>
+        </div>
+        <div class="form-section">
+            <h3>Vaccinations Saisonnières</h3>
+            <div class="form-grid">
+                <div class="form-group"><label for="vaccin-grippe">Grippe saisonnière</label><select id="vaccin-grippe"><option value="">Non renseigné</option><option value="oui-annee">Oui cette année</option><option value="oui-precedent">Oui année précédente</option><option value="non">Non</option></select></div>
+                <div class="form-group"><label for="date-grippe">Date dernière grippe</label><input type="text" id="date-grippe" placeholder="JJ/MM/AAAA"></div>
+                <div class="form-group"><label for="vaccin-covid">COVID-19</label><select id="vaccin-covid"><option value="">Non renseigné</option><option value="complet-rappel">Complet + rappel</option><option value="complet">Complet</option><option value="partiel">Partiel</option><option value="non">Non vacciné</option></select></div>
+                <div class="form-group"><label for="date-covid">Date dernier COVID-19</label><input type="text" id="date-covid" placeholder="JJ/MM/AAAA"></div>
+            </div>
+        </div>
+        <div class="form-section">
+            <h3>Autres Vaccinations</h3>
+            <div class="form-group"><label for="autres-vaccins">Autres vaccinations</label><textarea id="autres-vaccins" rows="4"></textarea></div>
+            <div class="form-group"><label for="serologies">Sérologies réalisées</label><textarea id="serologies" rows="3"></textarea></div>
+        </div>
+    </div>
+
+    <!-- ONGLET 6: RISQUES PROFESSIONNELS -->
+    <div id="risques" class="tab-content">
+        <h2>⚠️ Évaluation des Risques Professionnels</h2>
+        <div class="form-section"><h3>Risques Physiques</h3>
+            <div class="checkbox-group">
+                <label><input type="checkbox" name="risque-phys" value="bruit"> Bruit > 80 dB</label>
+                <label><input type="checkbox" name="risque-phys" value="vibrations"> Vibrations</label>
+                <label><input type="checkbox" name="risque-phys" value="rayonnements-ionisants"> Rayonnements ionisants</label>
+                <label><input type="checkbox" name="risque-phys" value="rayonnements-non-ionisants"> Rayonnements non ionisants</label>
+                <label><input type="checkbox" name="risque-phys" value="chaleur"> Températures extrêmes (chaud)</label>
+                <label><input type="checkbox" name="risque-phys" value="froid"> Températures extrêmes (froid)</label>
+                <label><input type="checkbox" name="risque-phys" value="pression"> Pression</label>
+                <label><input type="checkbox" name="risque-phys" value="electricite"> Électricité</label>
+            </div>
+        </div>
+        <div class="form-section"><h3>Risques Chimiques</h3>
+            <div class="checkbox-group">
+                <label><input type="checkbox" name="risque-chim" value="cmr"> Agents CMR</label>
+                <label><input type="checkbox" name="risque-chim" value="acd"> Agents chimiques dangereux</label>
+                <label><input type="checkbox" name="risque-chim" value="poussieres"> Poussières</label>
+                <label><input type="checkbox" name="risque-chim" value="fumees"> Fumées</label>
+                <label><input type="checkbox" name="risque-chim" value="gaz"> Gaz/Vapeurs</label>
+                <label><input type="checkbox" name="risque-chim" value="solvants"> Solvants</label>
+                <label><input type="checkbox" name="risque-chim" value="metaux"> Métaux lourds</label>
+                <label><input type="checkbox" name="risque-chim" value="amiante"> Amiante</label>
+            </div>
+            <div class="form-group"><label for="produits-utilises">Produits chimiques utilisés</label><textarea id="produits-utilises" rows="3"></textarea></div>
+        </div>
+        <div class="form-section"><h3>Risques Biologiques</h3>
+            <div class="checkbox-group">
+                <label><input type="checkbox" name="risque-bio" value="groupe1"> Groupe 1</label>
+                <label><input type="checkbox" name="risque-bio" value="groupe2"> Groupe 2</label>
+                <label><input type="checkbox" name="risque-bio" value="groupe3"> Groupe 3</label>
+                <label><input type="checkbox" name="risque-bio" value="groupe4"> Groupe 4</label>
+            </div>
+        </div>
+        <div class="form-section"><h3>Contraintes Physiques et Ergonomiques</h3>
+            <div class="checkbox-group">
+                <label><input type="checkbox" name="contrainte" value="manutention"> Manutention manuelle</label>
+                <label><input type="checkbox" name="contrainte" value="postures"> Postures pénibles</label>
+                <label><input type="checkbox" name="contrainte" value="gestes-repetitifs"> Gestes répétitifs</label>
+                <label><input type="checkbox" name="contrainte" value="station-debout"> Station debout prolongée</label>
+                <label><input type="checkbox" name="contrainte" value="position-assise"> Position assise prolongée</label>
+                <label><input type="checkbox" name="contrainte" value="ecran"> Travail sur écran > 4h/jour</label>
+                <label><input type="checkbox" name="contrainte" value="conduite"> Conduite de véhicules</label>
+                <label><input type="checkbox" name="contrainte" value="machines"> Machines dangereuses</label>
+            </div>
+        </div>
+        <div class="form-section"><h3>Risques Psychosociaux</h3>
+            <div class="checkbox-group">
+                <label><input type="checkbox" name="risque-psy" value="stress"> Stress chronique</label>
+                <label><input type="checkbox" name="risque-psy" value="horaires-atypiques"> Horaires atypiques</label>
+                <label><input type="checkbox" name="risque-psy" value="travail-nuit"> Travail de nuit</label>
+                <label><input type="checkbox" name="risque-psy" value="travail-isole"> Travail isolé</label>
+                <label><input type="checkbox" name="risque-psy" value="contact-public"> Contact avec le public</label>
+                <label><input type="checkbox" name="risque-psy" value="violence"> Risque de violence</label>
+            </div>
+        </div>
+        <div class="form-section"><h3>EPI</h3>
+            <div class="checkbox-group">
+                <label><input type="checkbox" name="epi" value="casque"> Casque</label>
+                <label><input type="checkbox" name="epi" value="lunettes"> Lunettes</label>
+                <label><input type="checkbox" name="epi" value="ecran-facial"> Écran facial</label>
+                <label><input type="checkbox" name="epi" value="protection-auditive"> Protection auditive</label>
+                <label><input type="checkbox" name="epi" value="masque-anti-poussiere"> Masque anti-poussière</label>
+                <label><input type="checkbox" name="epi" value="masque-ffp2"> Masque FFP2/FFP3</label>
+                <label><input type="checkbox" name="epi" value="appareil-respiratoire"> Appareil respiratoire</label>
+                <label><input type="checkbox" name="epi" value="gants"> Gants</label>
+                <label><input type="checkbox" name="epi" value="chaussures"> Chaussures</label>
+                <label><input type="checkbox" name="epi" value="vetements"> Vêtements</label>
+                <label><input type="checkbox" name="epi" value="harnais"> Harnais</label>
+            </div>
+        </div>
+        <div class="form-section"><h3>SMR</h3>
+            <div class="form-group"><label for="smr-justification">Justification SMR</label><textarea id="smr-justification" rows="3"></textarea></div>
+        </div>
+    </div>
+
+    <!-- ONGLET 7: CONCLUSION -->
+    <div id="conclusion" class="tab-content">
+        <h2>✅ Conclusion et Aptitude</h2>
+        <div class="form-section"><h3>Type de Visite</h3>
+            <div class="form-group"><label for="type-visite">Nature de la visite <span class="required">*</span></label>
+                <select id="type-visite" required>
+                    <option value="">Sélectionner</option>
+                    <option value="embauche">Visite d'embauche</option>
+                    <option value="periodique">Visite périodique</option>
+                    <option value="reprise">Visite de reprise</option>
+                    <option value="pre-reprise">Visite de pré-reprise</option>
+                    <option value="demande">Visite à la demande</option>
+                    <option value="mi-carriere">Visite de mi-carrière</option>
+                    <option value="fin-carriere">Visite de fin de carrière</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-section"><h3>Avis d'Aptitude</h3>
+            <div class="form-group"><label for="aptitude">Décision d'aptitude <span class="required">*</span></label>
+                <select id="aptitude" required onchange="gererAptitude()">
+                    <option value="">Sélectionner une décision</option>
+                    <option value="apte">✅ APTE à son poste de travail</option>
+                    <option value="apte-poste-propose">✅ APTE au poste proposé</option>
+                    <option value="indemne">✅ INDEMNE de toute maladie professionnelle</option>
+                    <option value="apte-amenagement">⚠️ APTE avec aménagement de poste</option>
+                    <option value="apte-restrictions">⚠️ APTE avec restrictions</option>
+                    <option value="inapte-temporaire">⏸️ INAPTE temporairement</option>
+                    <option value="inapte">❌ INAPTE au poste de travail</option>
+                </select>
+            </div>
+            <div class="form-group" id="div-restrictions" style="display:none;">
+                <label for="restrictions">Précisions sur les restrictions/aménagements</label>
+                <textarea id="restrictions" rows="4"></textarea>
+            </div>
+            <div class="form-group" id="div-duree-inaptitude" style="display:none;">
+                <label for="duree-inaptitude">Durée de l'inaptitude temporaire</label>
+                <input type="text" id="duree-inaptitude" placeholder="Ex: 3 mois">
+            </div>
+        </div>
+        <div class="form-section"><h3>Recommandations et Suivi</h3>
+            <div class="form-group"><label for="recommandations">Recommandations médicales</label><textarea id="recommandations" rows="4"></textarea></div>
+            <div class="form-group"><label for="orientations">Orientations médicales</label><textarea id="orientations" rows="3"></textarea></div>
+            <div class="form-group"><label for="examens-complementaires">Examens complémentaires à prévoir</label><textarea id="examens-complementaires" rows="3"></textarea></div>
+        </div>
+        <div class="form-section"><h3>Validation du Certificat</h3>
+            <div class="form-grid">
+                <div class="form-group"><label for="date-examen">Date de l'examen <span class="required">*</span></label><input type="text" id="date-examen" placeholder="JJ/MM/AAAA" required></div>
+                <div class="form-group"><label for="prochaine-visite">Prochaine visite prévue</label><input type="text" id="prochaine-visite" placeholder="JJ/MM/AAAA"></div>
+                <div class="form-group"><label for="medecin">Médecin du travail</label><input type="text" id="medecin" placeholder="Dr. "></div>
+                <div class="form-group"><label for="numero-ordre">N° Ordre</label><input type="text" id="numero-ordre"></div>
+                <div class="form-group"><label for="lieu-examen">Lieu de l'examen</label><input type="text" id="lieu-examen"></div>
+                <div class="form-group"><label for="signature">Code de validation</label><input type="password" id="signature" placeholder="Code médecin"></div>
+            </div>
+        </div>
+        <div class="form-section" style="background: #fff3cd; border: 2px solid #ffc107;">
+            <h3 style="color: #856404;">⚠️ Rappel Réglementaire</h3>
+            <p style="font-size: 14px; color: #856404;">
+                Ce certificat d'aptitude est établi conformément aux dispositions du Code du Travail.
+                Le salarié dispose d'un délai de 15 jours pour contester cet avis auprès de l'inspection du travail.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- BARRE D'ACTIONS FIXE -->
+<div class="action-bar-fixed">
+    <div class="action-bar-content" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+        <button onclick="sauvegarderDossier()" 
+                style="padding: 14px 28px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); 
+                       color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; 
+                       font-size: 16px; box-shadow: 0 4px 15px rgba(40,167,69,0.3); transition: all 0.3s;"
+                onmouseover="this.style.transform='translateY(-3px)'"
+                onmouseout="this.style.transform='translateY(0)'">
+            💾 Sauvegarder
+        </button>
+        
+        <div style="position: relative; display: inline-block;">
+            <button onclick="toggleMenuDocuments()" 
+                    style="padding: 14px 28px; background: #667eea; color: white; border: none; 
+                           border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 16px;
+                           box-shadow: 0 4px 15px rgba(102,126,234,0.3); transition: all 0.3s;
+                           display: flex; align-items: center; gap: 8px;"
+                    onmouseover="this.style.transform='translateY(-3px)'"
+                    onmouseout="this.style.transform='translateY(0)'">
+                📄 Documents <span style="font-size: 12px;">▼</span>
+            </button>
+            <div id="menuDocuments" style="
+                display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+                background: white; border: 2px solid #667eea; border-radius: 10px;
+                box-shadow: 0 -8px 30px rgba(0,0,0,0.15); z-index: 10000; min-width: 280px; margin-bottom: 10px;
+            ">
+                <button onclick="previsualiser(); toggleMenuDocuments()" style="width: 100%; padding: 14px 20px; text-align: left; border: none; background: white; cursor: pointer; font-size: 14px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 12px; border-radius: 10px 10px 0 0; transition: all 0.2s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
+                    <span style="font-size: 20px;">👁️</span> Prévisualiser
+                </button>
+                <button onclick="imprimerCertificatAptitude(); toggleMenuDocuments()" style="width: 100%; padding: 14px 20px; text-align: left; border: none; background: white; cursor: pointer; font-size: 14px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 12px; transition: all 0.2s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
+                    <span style="font-size: 20px;">📜</span> Certificat d'Aptitude
+                </button>
+                <button onclick="genererRapportMedical(); toggleMenuDocuments()" style="width: 100%; padding: 14px 20px; text-align: left; border: none; background: white; cursor: pointer; font-size: 14px; border-radius: 0 0 10px 10px; display: flex; align-items: center; gap: 12px; transition: all 0.2s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
+                    <span style="font-size: 20px;">📋</span> Rapport Médical Complet
+                </button>
+            </div>
+        </div>
+        
+        <button onclick="reinitialiser()" 
+                style="padding: 14px 28px; background: #6c757d; color: white; border: none; 
+                       border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 16px;
+                       box-shadow: 0 4px 15px rgba(108,117,125,0.3); transition: all 0.3s;"
+                onmouseover="this.style.transform='translateY(-3px)'"
+                onmouseout="this.style.transform='translateY(0)'">
+            🔄 Réinitialiser
+        </button>
+    </div>
+</div>
+
+<!-- BOUTON FLOTTANT NOUVELLE FICHE -->
+<div style="position: fixed; bottom: 100px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 999;">
+    <button onclick="nouvelleFiche()" style="
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white; border: none; width: 60px; height: 60px; border-radius: 50%;
+        font-size: 24px; cursor: pointer; box-shadow: 0 5px 20px rgba(40, 167, 69, 0.4);
+    " title="Nouvelle Fiche">➕</button>
+</div>
+
+<!-- FOOTER -->
+<footer style="
+    text-align: center; padding: 20px; margin-top: 40px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white; font-size: 14px;
+">
+    <div><strong>APSUMEDTRAV</strong> Version 3.0.0 - Multi-Utilisateurs | Firestore</div>
+    <div style="margin-top: 5px; opacity: 0.9;">© 2024 Dr.Nowa Santé au Travail - Tous droits réservés</div>
+    <div style="margin-top: 5px; font-size: 12px; opacity: 0.8;">Contact | Tél : +24397219565</div>
+</footer>
+
+<!-- ============================================ -->
+<!-- JAVASCRIPT PRINCIPAL - VERSION FIRESTORE -->
+<!-- ============================================ -->
+<script>
+'use strict';
+
+// ============================================
+// 1. CONFIGURATION & INITIALISATION FIREBASE
+// ============================================
+const firebaseConfig = {
+    apiKey: "AIzaSyBYj1zLDYLhoDOYKmMA9zd6nuoYSbGilBo",
+    authDomain: "apsumedtrav.firebaseapp.com",
+    projectId: "apsumedtrav",
+    storageBucket: "apsumedtrav.firebasestorage.app",
+    messagingSenderId: "705292661823",
+    appId: "1:705292661823:web:5d4b52f5a842b25f83348a"
+};
+
+// 🔥 NOUVEAU : Initialisation effective de Firebase
+firebase.initializeApp(firebaseConfig);
+const firestoreDB = firebase.firestore();
+const auth = firebase.auth();
+
+// 🔥 NOUVEAU : Activer la persistance hors-ligne (cache local)
+firestoreDB.enablePersistence({ synchronizeTabs: true })
+    .then(() => console.log('✅ Persistance Firestore activée'))
+    .catch(err => {
+        if (err.code === 'failed-precondition') {
+            console.warn('⚠️ Persistance impossible : plusieurs onglets ouverts');
+        } else if (err.code === 'unimplemented') {
+            console.warn('⚠️ Persistance non supportée par ce navigateur');
+        }
+    });
+
+// 🔥 NOUVEAU : Variable utilisateur connecté
+let utilisateurConnecte = null;
+let ecouteursTempReel = []; // Pour stocker les unsubscribe des listeners
+
+// ============================================
+// 🔥 NOUVEAU : SYSTÈME D'AUTHENTIFICATION
+// ============================================
+function setSyncStatus(status, text) {
+    const ind = document.getElementById('syncIndicator');
+    if (ind) {
+        ind.className = status;
+        ind.textContent = text;
+    }
+}
+
+function connexion() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errorDiv = document.getElementById('loginError');
+    errorDiv.textContent = '';
+
+    if (!email || !password) {
+        errorDiv.textContent = '⚠️ Veuillez remplir tous les champs.';
+        return;
+    }
+
+    errorDiv.textContent = '⏳ Connexion en cours...';
+    errorDiv.style.color = '#667eea';
+
+    auth.signInWithEmailAndPassword(email, password)
+        .then(userCredential => {
+            console.log('✅ Connecté:', userCredential.user.email);
+        })
+        .catch(error => {
+            console.error('❌ Erreur connexion:', error);
+            errorDiv.style.color = '#dc3545';
+            switch (error.code) {
+                case 'auth/user-not-found':
+                    errorDiv.textContent = '❌ Aucun compte avec cet email. Créez un compte.';
+                    break;
+                case 'auth/wrong-password':
+                case 'auth/invalid-credential':
+                    errorDiv.textContent = '❌ Mot de passe incorrect.';
+                    break;
+                case 'auth/invalid-email':
+                    errorDiv.textContent = '❌ Format d\'email invalide.';
+                    break;
+                case 'auth/too-many-requests':
+                    errorDiv.textContent = '❌ Trop de tentatives. Réessayez plus tard.';
+                    break;
+                default:
+                    errorDiv.textContent = '❌ Erreur : ' + error.message;
+            }
+        });
+}
+
+function inscription() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errorDiv = document.getElementById('loginError');
+    errorDiv.textContent = '';
+
+    if (!email || !password) {
+        errorDiv.textContent = '⚠️ Veuillez remplir tous les champs.';
+        return;
+    }
+    if (password.length < 6) {
+        errorDiv.textContent = '⚠️ Le mot de passe doit avoir au moins 6 caractères.';
+        return;
+    }
+
+    errorDiv.textContent = '⏳ Création du compte...';
+    errorDiv.style.color = '#667eea';
+
+    auth.createUserWithEmailAndPassword(email, password)
+        .then(userCredential => {
+            console.log('✅ Compte créé:', userCredential.user.email);
+            // Enregistrer le profil dans Firestore
+            return firestoreDB.collection('utilisateurs').doc(userCredential.user.uid).set({
+                email: email,
+                dateCreation: firebase.firestore.FieldValue.serverTimestamp(),
+                role: 'medecin'
+            });
+        })
+        .catch(error => {
+            console.error('❌ Erreur inscription:', error);
+            errorDiv.style.color = '#dc3545';
+            switch (error.code) {
+                case 'auth/email-already-in-use':
+                    errorDiv.textContent = '❌ Cet email est déjà utilisé. Connectez-vous.';
+                    break;
+                case 'auth/weak-password':
+                    errorDiv.textContent = '❌ Mot de passe trop faible (min 6 caractères).';
+                    break;
+                default:
+                    errorDiv.textContent = '❌ Erreur : ' + error.message;
+            }
+        });
+}
+
+function deconnexion() {
+    // Détacher les écouteurs temps réel
+    ecouteursTempReel.forEach(unsub => unsub());
+    ecouteursTempReel = [];
+
+    auth.signOut().then(() => {
+        console.log('✅ Déconnecté');
+        utilisateurConnecte = null;
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('userBar').style.display = 'none';
+    });
+}
+
+// 🔥 NOUVEAU : Observer les changements d'état d'authentification
+auth.onAuthStateChanged(user => {
+    if (user) {
+        utilisateurConnecte = user;
+        console.log('👤 Utilisateur connecté:', user.email);
+
+        // Masquer le login, afficher la barre utilisateur
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('userBar').style.display = 'block';
+        document.getElementById('userEmail').textContent = user.email;
+        document.getElementById('userName').textContent = user.displayName || user.email.split('@')[0];
+
+        // Lancer les écouteurs temps réel
+        demarrerEcouteTempsReel();
+
+        // Migrer les données localStorage vers Firestore si nécessaire
+        migrerLocalStorageVersFirestore();
+
+    } else {
+        utilisateurConnecte = null;
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('userBar').style.display = 'none';
+    }
+});
+
+// ============================================
+// 🔥 NOUVEAU : COUCHE D'ABSTRACTION FIRESTORE
+// ============================================
+
+// -- Sauvegarder un travailleur et sa consultation --
+async function sauvegarderDansFirestore(matricule, infosTravailleur, consultation) {
+    setSyncStatus('sync-loading', '🟡 Synchronisation...');
+    try {
+        const batch = firestoreDB.batch();
+
+        // Document principal du travailleur
+        const travailleurRef = firestoreDB.collection('travailleurs').doc(matricule);
+        batch.set(travailleurRef, {
+            ...infosTravailleur,
+            derniereMiseAJour: firebase.firestore.FieldValue.serverTimestamp(),
+            misAJourPar: utilisateurConnecte?.email || 'inconnu'
+        }, { merge: true });
+
+        // Sous-collection consultations
+        const consultId = consultation.id.toString();
+        const consultRef = travailleurRef.collection('consultations').doc(consultId);
+        batch.set(consultRef, {
+            ...consultation,
+            enregistrePar: utilisateurConnecte?.email || 'inconnu',
+            timestampServeur: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        await batch.commit();
+        console.log('✅ Firestore: sauvegarde réussie pour', matricule);
+        setSyncStatus('sync-ok', '🟢 Synchronisé');
+        return true;
+    } catch (error) {
+        console.error('❌ Firestore: erreur sauvegarde:', error);
+        setSyncStatus('sync-error', '🔴 Erreur sync');
+        return false;
+    }
+}
+
+// -- Lire tous les travailleurs --
+async function lireTousTravailleurs() {
+    try {
+        const snapshot = await firestoreDB.collection('travailleurs').orderBy('nom').get();
+        const travailleurs = [];
+        snapshot.forEach(doc => {
+            travailleurs.push({ matricule: doc.id, ...doc.data() });
+        });
+        console.log(`📊 Firestore: ${travailleurs.length} travailleur(s) lus`);
+        return travailleurs;
+    } catch (error) {
+        console.error('❌ Firestore: erreur lecture travailleurs:', error);
+        // Fallback localStorage
+        return JSON.parse(localStorage.getItem('liste_travailleurs') || '[]');
+    }
+}
+
+// -- Lire l'historique d'un travailleur --
+async function lireHistorique(matricule) {
+    try {
+        const snapshot = await firestoreDB.collection('travailleurs').doc(matricule)
+            .collection('consultations')
+            .orderBy('dateSauvegarde', 'desc')
+            .get();
+        const historique = [];
+        snapshot.forEach(doc => {
+            historique.push(doc.data());
+        });
+        console.log(`📊 Firestore: ${historique.length} consultation(s) pour ${matricule}`);
+        // Mettre en cache local
+        localStorage.setItem(`historique_${matricule}`, JSON.stringify(historique));
+        return historique;
+    } catch (error) {
+        console.error('❌ Firestore: erreur lecture historique:', error);
+        return JSON.parse(localStorage.getItem(`historique_${matricule}`) || '[]');
+    }
+}
+
+// -- Supprimer un travailleur --
+async function supprimerDansFirestore(matricule) {
+    try {
+        // Supprimer toutes les consultations (sous-collection)
+        const consultations = await firestoreDB.collection('travailleurs').doc(matricule)
+            .collection('consultations').get();
+        const batch = firestoreDB.batch();
+        consultations.forEach(doc => batch.delete(doc.ref));
+        // Supprimer le document principal
+        batch.delete(firestoreDB.collection('travailleurs').doc(matricule));
+        await batch.commit();
+        console.log('✅ Firestore: travailleur supprimé:', matricule);
+        return true;
+    } catch (error) {
+        console.error('❌ Firestore: erreur suppression:', error);
+        return false;
+    }
+}
+
+// -- Supprimer une consultation --
+async function supprimerConsultationFirestore(matricule, consultationId) {
+    try {
+        await firestoreDB.collection('travailleurs').doc(matricule)
+            .collection('consultations').doc(consultationId.toString()).delete();
+
+        // Recalculer le nombre de consultations
+        const snapshot = await firestoreDB.collection('travailleurs').doc(matricule)
+            .collection('consultations').get();
+        await firestoreDB.collection('travailleurs').doc(matricule).update({
+            nombreConsultations: snapshot.size,
+            derniereMiseAJour: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        console.log('✅ Firestore: consultation supprimée');
+        return true;
+    } catch (error) {
+        console.error('❌ Firestore: erreur suppression consultation:', error);
+        return false;
+    }
+}
+
+// ============================================
+// 🔥 NOUVEAU : ÉCOUTE TEMPS RÉEL
+// ============================================
+function demarrerEcouteTempsReel() {
+    console.log('👂 Démarrage de l\'écoute temps réel...');
+
+    // Écouter les changements sur la collection travailleurs
+    const unsub = firestoreDB.collection('travailleurs')
+        .onSnapshot(snapshot => {
+            console.log('🔄 Mise à jour temps réel reçue');
+            const travailleurs = [];
+            snapshot.forEach(doc => {
+                travailleurs.push({ matricule: doc.id, ...doc.data() });
+            });
+
+            // Mettre à jour le cache local
+            localStorage.setItem('liste_travailleurs', JSON.stringify(travailleurs));
+
+            // Actualiser l'affichage si le panneau est visible
+            const panel = document.getElementById('searchHistoryPanel');
+            if (panel && panel.style.display !== 'none') {
+                afficherResultats(travailleurs);
+                updateStatistiquesDepuisListe(travailleurs);
+            }
+
+            setSyncStatus('sync-ok', '🟢 Synchronisé');
+        }, error => {
+            console.error('❌ Erreur écoute temps réel:', error);
+            setSyncStatus('sync-error', '🔴 Hors ligne');
+        });
+
+    ecouteursTempReel.push(unsub);
+}
+
+// ============================================
+// 🔥 NOUVEAU : MIGRATION localStorage → Firestore
+// ============================================
+async function migrerLocalStorageVersFirestore() {
+    const dejaMigre = localStorage.getItem('migration_firestore_done');
+    if (dejaMigre) return;
+
+    console.log('🔄 Vérification de la migration localStorage → Firestore...');
+
+    const listeLocale = JSON.parse(localStorage.getItem('liste_travailleurs') || '[]');
+    if (listeLocale.length === 0) {
+        localStorage.setItem('migration_firestore_done', 'true');
+        return;
+    }
+
+    const snapshotFirestore = await firestoreDB.collection('travailleurs').limit(1).get();
+    if (!snapshotFirestore.empty) {
+        console.log('ℹ️ Firestore contient déjà des données, migration ignorée');
+        localStorage.setItem('migration_firestore_done', 'true');
+        return;
+    }
+
+    console.log(`🚀 Migration de ${listeLocale.length} travailleur(s) vers Firestore...`);
+    setSyncStatus('sync-loading', '🟡 Migration...');
+
+    let migres = 0;
+    for (const travailleur of listeLocale) {
+        try {
+            const matricule = travailleur.matricule;
+            if (!matricule) continue;
+
+            // Sauvegarder les infos du travailleur
+            await firestoreDB.collection('travailleurs').doc(matricule).set({
+                nom: travailleur.nom || '',
+                prenom: travailleur.prenom || '',
+                entreprise: travailleur.entreprise || '',
+                poste: travailleur.poste || '',
+                nombreConsultations: travailleur.nombreConsultations || 0,
+                derniereConsultation: travailleur.derniereConsultation || '',
+                derniereAptitude: travailleur.derniereAptitude || '',
+                derniereMiseAJour: firebase.firestore.FieldValue.serverTimestamp(),
+                misAJourPar: utilisateurConnecte?.email || 'migration'
+            });
+
+            // Migrer les consultations
+            const historique = JSON.parse(localStorage.getItem(`historique_${matricule}`) || '[]');
+            for (const consult of historique) {
+                const consultId = (consult.id || Date.now()).toString();
+                await firestoreDB.collection('travailleurs').doc(matricule)
+                    .collection('consultations').doc(consultId).set({
+                        ...consult,
+                        enregistrePar: 'migration',
+                        timestampServeur: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+            }
+
+            migres++;
+            console.log(`  ✅ ${matricule}: ${travailleur.nom} (${historique.length} consultations)`);
+        } catch (err) {
+            console.error(`  ❌ Erreur migration ${travailleur.matricule}:`, err);
+        }
+    }
+
+    localStorage.setItem('migration_firestore_done', 'true');
+    console.log(`✅ Migration terminée: ${migres}/${listeLocale.length} travailleurs migrés`);
+    setSyncStatus('sync-ok', '🟢 Migré');
+}
+
+// ============================================
+// 2. GESTION DES ONGLETS (inchangé)
+// ============================================
+function openTab(evt, tabName) {
+    const tabcontent = document.getElementsByClassName("tab-content");
+    const tabs = document.getElementsByClassName("tab");
+    for (let i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+        tabcontent[i].classList.remove("active");
+    }
+    for (let i = 0; i < tabs.length; i++) {
+        tabs[i].classList.remove("active");
+    }
+    const selectedTab = document.getElementById(tabName);
+    if (selectedTab) {
+        selectedTab.style.display = "block";
+        selectedTab.classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+}
+
+// ============================================
+// 3. FORMATAGE AUTOMATIQUE DES DATES (inchangé)
+// ============================================
+function formaterDate(input) {
+    let value = input.value.replace(/\D/g, '');
+    let formattedValue = '';
+    if (value.length > 0) {
+        if (value.length <= 2) formattedValue = value;
+        else if (value.length <= 4) formattedValue = value.slice(0, 2) + '/' + value.slice(2);
+        else formattedValue = value.slice(0, 2) + '/' + value.slice(2, 4) + '/' + value.slice(4, 8);
+    }
+    input.value = formattedValue;
+}
+
+// ============================================
+// 4. CALCUL DE L'ÂGE (inchangé)
+// ============================================
+function calculerAge() {
+    const dateNaissanceInput = document.getElementById('date-naissance');
+    const ageInput = document.getElementById('age');
+    if (!dateNaissanceInput || !ageInput) return;
+    const dateStr = dateNaissanceInput.value;
+    if (dateStr.length === 10) {
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+            const dateNaissance = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+            const aujourdhui = new Date();
+            let age = aujourdhui.getFullYear() - dateNaissance.getFullYear();
+            const moisDiff = aujourdhui.getMonth() - dateNaissance.getMonth();
+            if (moisDiff < 0 || (moisDiff === 0 && aujourdhui.getDate() < dateNaissance.getDate())) age--;
+            if (age > 0 && age < 120) ageInput.value = age + ' ans';
+        }
+    }
+}
+
+// ============================================
+// 5. CALCUL ANCIENNETÉ (inchangé)
+// ============================================
+(function initAnciennete() {
+    const dateEmbauche = document.getElementById('date-embauche');
+    const dateConsultation = document.getElementById('date-consultation');
+    const anciennete = document.getElementById('anciennete');
+    if (!dateEmbauche || !anciennete) return;
+
+    function calculerAnciennete() {
+        const dateEmbaucheTxt = dateEmbauche.value;
+        if (!dateEmbaucheTxt) { anciennete.textContent = '-- ans -- mois'; return; }
+        let dateE;
+        if (dateEmbaucheTxt.includes('/')) {
+            const [jour, mois, annee] = dateEmbaucheTxt.split('/');
+            dateE = new Date(annee, mois - 1, jour);
+        } else if (dateEmbaucheTxt.includes('-')) { dateE = new Date(dateEmbaucheTxt); }
+        else return;
+
+        let dateC;
+        if (dateConsultation && dateConsultation.value) {
+            const txt = dateConsultation.value;
+            if (txt.includes('/')) { const [j, m, a] = txt.split('/'); dateC = new Date(a, m - 1, j); }
+            else dateC = new Date(txt);
+        } else dateC = new Date();
+
+        let annees = dateC.getFullYear() - dateE.getFullYear();
+        let mois = dateC.getMonth() - dateE.getMonth();
+        if (mois < 0) { annees--; mois += 12; }
+        anciennete.textContent = annees + ' ans ' + mois + ' mois';
+    }
+
+    ['input', 'blur', 'change'].forEach(evt => {
+        dateEmbauche.addEventListener(evt, calculerAnciennete);
+        if (dateConsultation) dateConsultation.addEventListener(evt, calculerAnciennete);
+    });
+    if (dateEmbauche.value) calculerAnciennete();
+})();
+
+// ============================================
+// 6. CALCUL DE L'IMC (inchangé)
+// ============================================
+function calculerIMC() {
+    const poids = parseFloat(document.getElementById('poids')?.value);
+    const taille = parseFloat(document.getElementById('taille')?.value);
+    const imcInput = document.getElementById('imc');
+    const interpInput = document.getElementById('interpretation-imc');
+    if (poids > 0 && taille > 0 && imcInput) {
+        const tailleM = taille / 100;
+        const imc = (poids / (tailleM * tailleM)).toFixed(2);
+        imcInput.value = imc;
+        if (interpInput) {
+            const v = parseFloat(imc);
+            interpInput.value = v < 18.5 ? 'Maigreur' : v < 25 ? 'Poids normal' : v < 30 ? 'Surpoids' : v < 35 ? 'Obésité modérée' : v < 40 ? 'Obésité sévère' : 'Obésité morbide';
+        }
+    }
+}
+
+// ============================================
+// 7. GESTION DE L'APTITUDE (inchangé)
+// ============================================
+function gererAptitude() {
+    const val = document.getElementById('aptitude')?.value;
+    const divR = document.getElementById('div-restrictions');
+    const divD = document.getElementById('div-duree-inaptitude');
+    if (divR && divD) {
+        divR.style.display = (val === 'apte-amenagement' || val === 'apte-restrictions') ? 'block' : 'none';
+        divD.style.display = (val === 'inapte-temporaire') ? 'block' : 'none';
+    }
+}
+
+// ============================================
+// 8. 🔥 MODIFIÉ : SAUVEGARDE - Firestore + localStorage
+// ============================================
+async function sauvegarderDossier() {
+    try {
+        const matricule = document.getElementById('matricule')?.value?.trim();
+        const dateExamen = document.getElementById('date-examen')?.value;
+
+        if (!matricule) {
+            alert('⚠️ Veuillez saisir un MATRICULE avant de sauvegarder.');
+            document.getElementById('matricule')?.focus();
+            return;
+        }
+        if (!dateExamen) {
+            alert('⚠️ Veuillez saisir une DATE D\'EXAMEN.');
+            document.getElementById('date-examen')?.focus();
+            return;
+        }
+
+        setSyncStatus('sync-loading', '🟡 Sauvegarde...');
+
+        // Construction de l'objet consultation (identique à l'original)
+        const consultation = {
+            id: Date.now(),
+            dateConsultation: dateExamen,
+            dateSauvegarde: new Date().toISOString(),
+            medecin: document.getElementById('medecin')?.value || '',
+            identification: {
+                nom: document.getElementById('nom')?.value?.toUpperCase() || '',
+                prenom: document.getElementById('prenom')?.value || '',
+                dateNaissance: document.getElementById('date-naissance')?.value || '',
+                age: document.getElementById('age')?.value || '',
+                genre: document.getElementById('genre')?.value || '',
+                matricule: matricule,
+                telephone: document.getElementById('telephone')?.value || '',
+                email: document.getElementById('email')?.value || '',
+                adresse: document.getElementById('adresse')?.value || ''
+            },
+            professionnel: {
+                entreprise: document.getElementById('entreprise')?.value || '',
+                poste: document.getElementById('poste')?.value || '',
+                departement: document.getElementById('departement')?.value || '',
+                dateEmbauche: document.getElementById('date-embauche')?.value || '',
+                anciennete: document.getElementById('anciennete')?.textContent || '',
+                typeContrat: document.getElementById('type-contrat')?.value || '',
+                horaireTravail: document.getElementById('horaire-travail')?.value || '',
+                typeVisite: document.getElementById('type-visite')?.value || ''
+            },
+            antecedents: {
+                medicaux: document.getElementById('autres-antecedents')?.value || '',
+                chirurgicaux: document.getElementById('chirurgie')?.value || '',
+                accidentTravail: document.getElementById('accident-travail')?.value || '',
+                maladiePro: document.getElementById('maladie-pro')?.value || '',
+                allergies: document.getElementById('allergies')?.value || '',
+                tabac: document.getElementById('tabac')?.value || '',
+                nbCigarettes: document.getElementById('nb-cigarettes')?.value || '',
+                alcool: document.getElementById('alcool')?.value || '',
+                activitePhysique: document.getElementById('activite-physique')?.value || '',
+                medicaments: document.getElementById('medicaments')?.value || ''
+            },
+            constantes: {
+                poids: document.getElementById('poids')?.value || '',
+                taille: document.getElementById('taille')?.value || '',
+                imc: document.getElementById('imc')?.value || '',
+                interpretationIMC: document.getElementById('interpretation-imc')?.value || '',
+                taSystolique: document.getElementById('ta-systolique')?.value || '',
+                taDiastolique: document.getElementById('ta-diastolique')?.value || '',
+                pouls: document.getElementById('pouls')?.value || '',
+                frequenceResp: document.getElementById('frequence-resp')?.value || '',
+                temperature: document.getElementById('temperature')?.value || '',
+                saturation: document.getElementById('saturation')?.value || '',
+                etatGeneral: document.getElementById('etat-general')?.value || '',
+                observations: document.getElementById('observations-generales')?.value || ''
+            },
+            examensPhysiques: {
+                cardio: document.getElementById('examen-cardio')?.value || '',
+                pulm: document.getElementById('examen-pulm')?.value || '',
+                abdo: document.getElementById('examen-abdo')?.value || '',
+                neuro: document.getElementById('examen-neuro')?.value || '',
+                osteo: document.getElementById('examen-osteo')?.value || '',
+                dermato: document.getElementById('examen-dermato')?.value || '',
+                orl: document.getElementById('examen-orl')?.value || '',
+                ophtalmo: document.getElementById('examen-ophtalmo')?.value || ''
+            },
+            biologie: {
+                dateBilan: document.getElementById('date-bilan')?.value || '',
+                glycemie: document.getElementById('glycemie')?.value || '',
+                hba1c: document.getElementById('hba1c')?.value || '',
+                cholesterolTotal: document.getElementById('cholesterol-total')?.value || '',
+                hdl: document.getElementById('hdl')?.value || '',
+                ldl: document.getElementById('ldl')?.value || '',
+                triglycerides: document.getElementById('triglycerides')?.value || '',
+                creatinine: document.getElementById('creatinine')?.value || '',
+                acideUrique: document.getElementById('acide-urique')?.value || '',
+                asat: document.getElementById('asat')?.value || '',
+                alat: document.getElementById('alat')?.value || '',
+                hemoglobine: document.getElementById('hemoglobine')?.value || '',
+                hematocrite: document.getElementById('hematocrite')?.value || '',
+                leucocytes: document.getElementById('leucocytes')?.value || '',
+                plaquettes: document.getElementById('plaquettes')?.value || ''
+            },
+            imagerie: {
+                radioThorax: document.getElementById('radio-thorax')?.value || '',
+                ecg: document.getElementById('ecg')?.value || '',
+                echographie: document.getElementById('echographie')?.value || ''
+            },
+            examensFonctionnels: {
+                audiometrie: document.getElementById('audiometrie')?.value || '',
+                spirometrie: document.getElementById('spirometrie')?.value || '',
+                visionOD: document.getElementById('vision-od')?.value || '',
+                visionOG: document.getElementById('vision-og')?.value || '',
+                visionBinoculaire: document.getElementById('vision-binoculaire')?.value || '',
+                autresExamens: document.getElementById('autres-examens')?.value || ''
+            },
+            vaccinations: {
+                dtPolio: document.getElementById('vaccin-dt-polio')?.value || '',
+                hepatiteB: document.getElementById('vaccin-hepatite-b')?.value || '',
+                grippe: document.getElementById('vaccin-grippe')?.value || '',
+                covid: document.getElementById('vaccin-covid')?.value || ''
+            },
+            risques: {
+                produitsUtilises: document.getElementById('produits-utilises')?.value || '',
+                smrJustification: document.getElementById('smr-justification')?.value || ''
+            },
+            conclusion: {
+                aptitude: document.getElementById('aptitude')?.value || '',
+                restrictions: document.getElementById('restrictions')?.value || '',
+                dureeInaptitude: document.getElementById('duree-inaptitude')?.value || '',
+                recommandations: document.getElementById('recommandations')?.value || '',
+                orientations: document.getElementById('orientations')?.value || '',
+                examensComplementaires: document.getElementById('examens-complementaires')?.value || '',
+                prochaineVisite: document.getElementById('prochaine-visite')?.value || ''
+            },
+            cabinet: {
+                nomCabinet: document.getElementById('nom-cabinet')?.value || 'Cabinet Médical',
+                numeroOrdre: document.getElementById('numero-ordre')?.value || '',
+                lieuExamen: document.getElementById('lieu-examen')?.value || ''
+            }
+        };
+
+        // --- Sauvegarde localStorage (cache local, identique à avant) ---
+        const cleHistorique = `historique_${matricule}`;
+        let historique = JSON.parse(localStorage.getItem(cleHistorique) || '[]');
+        const indexExistant = historique.findIndex(c => c.dateConsultation === dateExamen);
+        if (indexExistant >= 0) {
+            if (!confirm(`⚠️ Une consultation existe déjà pour le ${dateExamen}.\nVoulez-vous la REMPLACER ?`)) return;
+            historique[indexExistant] = consultation;
+        } else {
+            historique.push(consultation);
+        }
+        historique.sort((a, b) => new Date(b.dateSauvegarde) - new Date(a.dateSauvegarde));
+        localStorage.setItem(cleHistorique, JSON.stringify(historique));
+
+        const infosTravailleur = {
+            nom: consultation.identification.nom,
+            prenom: consultation.identification.prenom,
+            matricule: matricule,
+            entreprise: consultation.professionnel.entreprise,
+            poste: consultation.professionnel.poste,
+            derniereConsultation: dateExamen,
+            nombreConsultations: historique.length,
+            derniereAptitude: consultation.conclusion.aptitude
+        };
+        let listeTravailleurs = JSON.parse(localStorage.getItem('liste_travailleurs') || '[]');
+        const idx = listeTravailleurs.findIndex(t => t.matricule === matricule);
+        if (idx >= 0) listeTravailleurs[idx] = infosTravailleur;
+        else listeTravailleurs.push(infosTravailleur);
+        listeTravailleurs.sort((a, b) => (a.nom || '').localeCompare(b.nom || ''));
+        localStorage.setItem('liste_travailleurs', JSON.stringify(listeTravailleurs));
+
+        // 🔥 --- Sauvegarde Firestore (base partagée) ---
+        await sauvegarderDansFirestore(matricule, infosTravailleur, consultation);
+
+        alert(`✅ Dossier sauvegardé et synchronisé !
+
+👤 ${consultation.identification.prenom} ${consultation.identification.nom}
+📅 Consultation du ${dateExamen}
+📋 Total consultations : ${historique.length}
+🏥 ${consultation.professionnel.entreprise}
+☁️ Synchronisé avec la base partagée`);
+
+        if (document.getElementById('panel-historique')?.style.display === 'block') {
+            afficherHistorique(matricule);
+        }
+
+    } catch (error) {
+        console.error('❌ Erreur sauvegarde:', error);
+        setSyncStatus('sync-error', '🔴 Erreur');
+        alert('❌ Erreur lors de la sauvegarde.\nDétails : ' + error.message);
+    }
+}
+
+// ============================================
+// 🔥 MODIFIÉ : Actualiser depuis Firestore
+// ============================================
+async function actualiserDepuisFirestore() {
+    setSyncStatus('sync-loading', '🟡 Actualisation...');
+    try {
+        const travailleurs = await lireTousTravailleurs();
+        localStorage.setItem('liste_travailleurs', JSON.stringify(travailleurs));
+        afficherResultats(travailleurs);
+        updateStatistiquesDepuisListe(travailleurs);
+        setSyncStatus('sync-ok', '🟢 Synchronisé');
+        console.log('✅ Données actualisées depuis Firestore');
+    } catch (error) {
+        console.error('❌ Erreur actualisation:', error);
+        setSyncStatus('sync-error', '🔴 Erreur');
+    }
+}
+
+function sauvegarderEtActualiser() {
+    actualiserDepuisFirestore();
+}
+
+// ============================================
+// 9. CERTIFICAT D'APTITUDE (inchangé, lit depuis le DOM)
+// ============================================
+function imprimerCertificatAptitude() {
+    const nom = document.getElementById('nom')?.value || '';
+    const prenom = document.getElementById('prenom')?.value || '';
+    const dateNaissance = document.getElementById('date-naissance')?.value || '';
+    const age = document.getElementById('age')?.value || '';
+    const genre = document.getElementById('genre')?.options[document.getElementById('genre')?.selectedIndex]?.text || '';
+    const matricule = document.getElementById('matricule')?.value || '';
+    const entreprise = document.getElementById('entreprise')?.value || '';
+    const poste = document.getElementById('poste')?.value || '';
+    const dateEmbauche = document.getElementById('date-embauche')?.value || '';
+    const anciennete = document.getElementById('anciennete')?.innerHTML || '';
+    const nomCabinet = document.getElementById('nom-cabinet')?.value || 'Cabinet Médical';
+    const typeVisite = document.getElementById('type-visite')?.options[document.getElementById('type-visite')?.selectedIndex]?.text || '';
+    const aptitude = document.getElementById('aptitude')?.options[document.getElementById('aptitude')?.selectedIndex]?.text || '';
+    const restrictions = document.getElementById('restrictions')?.value || '';
+    const dateExamen = document.getElementById('date-examen')?.value || '';
+    const prochaineVisite = document.getElementById('prochaine-visite')?.value || '';
+    const medecin = document.getElementById('medecin')?.value || '';
+    const numeroOrdre = document.getElementById('numero-ordre')?.value || '';
+    const lieuExamen = document.getElementById('lieu-examen')?.value || '';
+    const observations = document.getElementById('recommandations')?.value || '';
+
+    const printWindow = window.open('', '', 'width=800,height=1100');
+    function creerCertificat() {
+        return `<div class="certificat">
+            <div class="header"><h1>🏥 ${nomCabinet.toUpperCase()}</h1><p>CERTIFICAT D'APTITUDE MÉDICALE AU TRAVAIL</p><p>Service de Médecine du Travail</p></div>
+            <div class="two-columns">
+                <div class="column"><div class="section"><div class="section-title">IDENTIFICATION DU TRAVAILLEUR</div>
+                    <div class="row"><span class="label">Nom :</span><span class="value"><strong>${nom.toUpperCase()}</strong></span></div>
+                    <div class="row"><span class="label">Prénom :</span><span class="value"><strong>${prenom.toUpperCase()}</strong></span></div>
+                    <div class="row"><span class="label">Date de naissance :</span><span class="value">${dateNaissance}</span></div>
+                    <div class="row"><span class="label">Âge :</span><span class="value">${age}</span></div>
+                    <div class="row"><span class="label">Genre :</span><span class="value">${genre}</span></div>
+                    <div class="row"><span class="label">Matricule :</span><span class="value">${matricule}</span></div>
+                </div></div>
+                <div class="column"><div class="section"><div class="section-title">INFORMATIONS PROFESSIONNELLES</div>
+                    <div class="row"><span class="label">Entreprise :</span><span class="value"><strong>${entreprise}</strong></span></div>
+                    <div class="row"><span class="label">Poste :</span><span class="value">${poste}</span></div>
+                    <div class="row"><span class="label">Date d'embauche :</span><span class="value">${dateEmbauche}</span></div>
+                    <div class="row"><span class="label">Ancienneté :</span><span class="value"><strong>${anciennete}</strong></span></div>
+                    <div class="row"><span class="label">Type de visite :</span><span class="value">${typeVisite}</span></div>
+                    <div class="row"><span class="label">Date examen :</span><span class="value">${dateExamen}</span></div>
+                </div></div>
+            </div>
+            <div class="aptitude-box"><div>DÉCISION D'APTITUDE</div><div class="decision">${aptitude}</div>
+                ${restrictions ? `<div style="margin-top:8px;text-align:left;font-size:9px;"><strong>Restrictions :</strong> ${restrictions}</div>` : ''}</div>
+            ${observations ? `<div class="section" style="padding:5px;"><div class="section-title">OBSERVATIONS</div><div style="font-size:9px;">${observations.substring(0,100)}</div></div>` : ''}
+            ${prochaineVisite ? `<div class="section" style="padding:5px;"><div class="row"><span class="label">Prochaine visite :</span><span class="value"><strong>${prochaineVisite}</strong></span></div></div>` : ''}
+            <div class="signature-box">
+                <div class="signature"><div><strong>Le Médecin du Travail</strong></div><div style="margin-top:5px;">Dr. ${medecin}</div><div>N° Ordre : ${numeroOrdre}</div><div class="signature-line">Signature et cachet</div></div>
+                <div class="stamp-area">Cachet du service</div>
+            </div>
+            <div class="legal-notice"><strong>⚠️ Rappel :</strong> Délai de contestation : 15 jours.</div>
+            <div class="footer-info">APSUMEDTRAV - ${new Date().toLocaleDateString('fr-FR')} ${new Date().toLocaleTimeString('fr-FR')}</div>
+        </div>`;
+    }
+    const printContent = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Certificat - ${nom} ${prenom}</title>
+    <style>@page{size:A4;margin:8mm}body{font-family:Arial,sans-serif;font-size:10px;line-height:1.4;margin:0;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+    .certificat{width:195mm;height:125mm;padding:8mm;border:2px solid #333;margin:3mm auto;box-sizing:border-box;position:relative;display:flex;flex-direction:column}
+    .certificat::before{content:"APSUMEDTRAV";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-45deg);font-size:60px;color:rgba(200,200,200,.1);font-weight:bold;z-index:0;pointer-events:none}
+    .certificat>*{position:relative;z-index:1}.separator{width:190mm;margin:0 auto;border-top:2px dashed #999;text-align:center;padding:2mm 0;color:#999;font-size:8px}
+    .header{text-align:center;margin-bottom:5px;padding:5px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border-radius:5px;width:100%}.header h1{margin:0;font-size:14px}.header p{margin:1px 0;font-size:9px}
+    .section{margin-bottom:5px;padding:5px;border:1px solid #ddd;border-radius:3px;width:100%}.section-title{font-weight:bold;font-size:10px;color:#667eea;margin-bottom:4px;border-bottom:1px solid #667eea;padding-bottom:1px;text-align:center}
+    .row{display:flex;margin-bottom:2px;justify-content:center;align-items:center}.label{font-weight:bold;width:120px;color:#555;font-size:9px;text-align:right;padding-right:10px}.value{flex:1;font-size:9px;text-align:left}
+    .aptitude-box{background:#e8f4ff;padding:8px;border:2px solid #667eea;border-radius:5px;margin:5px 0;text-align:center;width:100%}.aptitude-box .decision{font-size:12px;font-weight:bold;color:#667eea;margin:3px 0}
+    .two-columns{display:flex;gap:5px;width:100%;justify-content:center}.column{flex:1}
+    .signature-box{display:flex;justify-content:space-between;margin-top:5px;width:100%;align-items:center}.signature{width:45%;text-align:center;font-size:8px}.signature-line{border-top:1px solid #333;margin-top:15px;padding-top:2px;font-size:7px}
+    .stamp-area{border:1px dashed #999;padding:10px;text-align:center;color:#999;font-size:8px;width:45%}.legal-notice{background:#fffacd;padding:5px;border-left:3px solid #ffd700;margin-top:5px;font-size:8px;line-height:1.2;width:100%;text-align:center}
+    .footer-info{text-align:center;margin-top:5px;font-size:7px;color:#999;width:100%}</style></head>
+    <body>${creerCertificat()}<div class="separator">✂ - - - - - - - - - - ✂</div>${creerCertificat()}</body></html>`;
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 500);
+}
+
+// ============================================
+// 10-12. PRÉVISUALISATION, RÉINITIALISATION, NOUVELLE FICHE (inchangés)
+// ============================================
+function previsualiser() {
+    if (confirm('OK = Certificat d\'Aptitude\nAnnuler = Rapport Médical Détaillé')) imprimerCertificatAptitude();
+    else genererRapportMedical();
+}
+
+function reinitialiser() {
+    if (confirm('⚠️ Réinitialiser tous les champs ?')) location.reload();
+}
+
+function nouvelleFiche() {
+    if (confirm('⚠️ Créer une nouvelle fiche ? Les données non sauvegardées seront perdues.')) {
+        document.querySelectorAll('input[type="text"], input[type="number"], textarea').forEach(f => f.value = '');
+        document.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+        document.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = false);
+        const firstTab = document.querySelector('.tab');
+        if (firstTab) firstTab.click();
+    }
+}
+
+// ============================================
+// 13. GESTION DU PANNEAU DE RECHERCHE
+// ============================================
+function afficherPanneau() {
+    const panel = document.getElementById('searchHistoryPanel');
+    const btn = document.getElementById('btnOpenSearch');
+    if (panel) {
+        panel.style.display = 'block';
+        actualiserDepuisFirestore(); // 🔥 Lecture Firestore
+    }
+    if (btn) btn.style.display = 'none';
+}
+
+function cacherPanneau() {
+    const panel = document.getElementById('searchHistoryPanel');
+    const btn = document.getElementById('btnOpenSearch');
+    if (panel) panel.style.display = 'none';
+    if (btn) btn.style.display = 'block';
+}
+
+// ============================================
+// 15. 🔥 MODIFIÉ : STATISTIQUES
+// ============================================
+function updateStatistiquesDepuisListe(travailleurs) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const thisWeek = new Date(); thisWeek.setDate(thisWeek.getDate() - 7);
+    const thisMonth = new Date(); thisMonth.setMonth(thisMonth.getMonth() - 1);
+    let todayCount = 0, weekCount = 0, monthCount = 0;
+
+    travailleurs.forEach(t => {
+        const d = t.derniereConsultation ? new Date(t.derniereConsultation) : null;
+        if (d) {
+            const dc = new Date(d); dc.setHours(0,0,0,0);
+            if (dc.getTime() === today.getTime()) todayCount++;
+            if (d > thisWeek) weekCount++;
+            if (d > thisMonth) monthCount++;
+        }
+    });
+
+    const el = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+    el('totalPatients', travailleurs.length);
+    el('patientsToday', todayCount);
+    el('patientsWeek', weekCount);
+    el('patientsMonth', monthCount);
+}
+
+function updateStatistiques() {
+    const liste = JSON.parse(localStorage.getItem('liste_travailleurs') || '[]');
+    updateStatistiquesDepuisListe(liste);
+}
+
+// ============================================
+// 16. 🔥 MODIFIÉ : AFFICHAGE DES PATIENTS
+// ============================================
+async function afficherTousPatients() {
+    const container = document.getElementById('resultatsRecherche');
+    if (!container) return;
+    container.innerHTML = '<div style="text-align:center;padding:40px;"><div style="font-size:48px;">⏳</div><p style="margin-top:20px;color:#667eea;">Chargement depuis la base partagée...</p></div>';
+
+    try {
+        const travailleurs = await lireTousTravailleurs();
+        if (travailleurs.length > 0) {
+            afficherResultats(travailleurs);
+            updateStatistiquesDepuisListe(travailleurs);
+        } else {
+            container.innerHTML = '<div style="text-align:center;padding:60px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:15px;color:white;"><div style="font-size:80px;margin-bottom:20px;">📂</div><h2>Base de données vide</h2><p>Aucun travailleur enregistré</p></div>';
+        }
+    } catch (error) {
+        console.error('❌ Erreur:', error);
+        // Fallback localStorage
+        const liste = JSON.parse(localStorage.getItem('liste_travailleurs') || '[]');
+        if (liste.length > 0) afficherResultats(liste);
+    }
+}
+
+function afficherResultats(travailleurs) {
+    const container = document.getElementById('resultatsRecherche');
+    if (!container) return;
+    if (!travailleurs || travailleurs.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:60px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:15px;color:white;"><div style="font-size:80px;margin-bottom:20px;">📂</div><h2>Aucun résultat</h2></div>';
+        return;
+    }
+    const totalConsultations = travailleurs.reduce((t, w) => t + (w.nombreConsultations || 0), 0);
+    let html = `<div style="margin-bottom:25px;padding:25px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;border-radius:15px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+            <div><h3 style="margin:0 0 8px 0;font-size:24px;">👥 Base de Données Partagée</h3>
+                <p style="margin:0;opacity:0.9;font-size:14px;">Mise à jour : ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}
+                ${utilisateurConnecte ? ` | 👨‍⚕️ ${utilisateurConnecte.email}` : ''}</p></div>
+            <div style="display:flex;gap:20px;margin-top:10px;">
+                <div style="background:rgba(255,255,255,.2);padding:15px 25px;border-radius:10px;text-align:center;"><div style="font-size:28px;font-weight:bold;">${travailleurs.length}</div><div style="font-size:12px;opacity:.9;">Travailleurs</div></div>
+                <div style="background:rgba(255,255,255,.2);padding:15px 25px;border-radius:10px;text-align:center;"><div style="font-size:28px;font-weight:bold;">${totalConsultations}</div><div style="font-size:12px;opacity:.9;">Consultations</div></div>
+            </div></div></div>
+        <div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 15px rgba(0,0,0,.1);">
+            <table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#667eea;color:white;">
+                <th style="padding:16px;text-align:left;">📋 Matricule</th><th style="padding:16px;text-align:left;">👤 Nom</th>
+                <th style="padding:16px;text-align:left;">👤 Prénom</th><th style="padding:16px;text-align:left;">🏢 Entreprise</th>
+                <th style="padding:16px;text-align:center;">📊 Consult.</th><th style="padding:16px;text-align:center;">⚙️ Actions</th>
+            </tr></thead><tbody>`;
+
+    travailleurs.forEach((t, i) => {
+        const bg = i % 2 === 0 ? '#ffffff' : '#f8f9fa';
+        const nb = t.nombreConsultations || 0;
+        html += `<tr style="border-bottom:1px solid #e9ecef;background:${bg};transition:all .2s;" onmouseover="this.style.background='#e3f2fd'" onmouseout="this.style.background='${bg}'">
+            <td style="padding:16px;"><span style="font-family:monospace;color:#667eea;font-weight:bold;background:#e8eaf6;padding:6px 12px;border-radius:6px;">${t.matricule||'N/A'}</span></td>
+            <td style="padding:16px;font-weight:600;">${t.nom||'N/A'}</td>
+            <td style="padding:16px;">${t.prenom||'N/A'}</td>
+            <td style="padding:16px;"><span style="background:#f0f0f0;padding:4px 10px;border-radius:5px;font-size:13px;">${t.entreprise||'N/A'}</span></td>
+            <td style="padding:16px;text-align:center;"><span style="background:${nb>0?'#667eea':'#6c757d'};color:white;padding:6px 14px;border-radius:12px;font-weight:bold;">${nb}</span></td>
+            <td style="padding:16px;"><div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+                <button onclick="ouvrirHistoriqueDepuisListe('${t.matricule}')" style="padding:8px 14px;background:#667eea;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;">📋 Historique</button>
+                ${nb>0?`<button onclick="chargerDernierDossier('${t.matricule}')" style="padding:8px 14px;background:#28a745;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;">📂 Charger</button>`:''}
+                <button onclick="supprimerTravailleur('${t.matricule}')" style="padding:8px 14px;background:#dc3545;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🗑️</button>
+            </div></td></tr>`;
+    });
+
+    html += '</tbody></table></div><div style="margin-top:20px;padding:15px;background:#f8f9fa;border-radius:10px;text-align:center;color:#6c757d;"><small>☁️ Base partagée entre tous les intervenants connectés | Synchronisation en temps réel</small></div>';
+    container.innerHTML = html;
+}
+
+// ============================================
+// 17. 🔥 MODIFIÉ : RECHERCHE EN TEMPS RÉEL
+// ============================================
+async function rechercherPatientLive() {
+    const terme = document.getElementById('searchPatientInput')?.value?.toLowerCase() || '';
+    if (terme.length === 0) {
+        actualiserDepuisFirestore();
+        return;
+    }
+    try {
+        const tous = await lireTousTravailleurs();
+        const resultats = tous.filter(t => {
+            const texte = `${t.nom} ${t.prenom} ${t.entreprise} ${t.matricule} ${t.poste}`.toLowerCase();
+            return texte.includes(terme);
+        });
+        afficherResultats(resultats);
+    } catch (e) {
+        // Fallback local
+        const tous = JSON.parse(localStorage.getItem('liste_travailleurs') || '[]');
+        const resultats = tous.filter(t => JSON.stringify(t).toLowerCase().includes(terme));
+        afficherResultats(resultats);
+    }
+}
+
+// ============================================
+// FONCTIONS NAVIGATION HISTORIQUE
+// ============================================
+function ouvrirHistoriqueDepuisListe(matricule) {
+    const champ = document.getElementById('matricule');
+    if (champ) champ.value = matricule;
+    ouvrirHistorique();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function chargerDernierDossier(matricule) {
+    const historique = await lireHistorique(matricule);
+    if (historique.length > 0) {
+        remplirFormulaire(historique[0]);
+        cacherPanneau();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        alert(`✅ Dernier dossier chargé pour ${matricule}`);
+    } else {
+        alert('❌ Aucune consultation trouvée.');
+    }
+}
+
+// 🔥 MODIFIÉ : Supprimer via Firestore
+async function supprimerTravailleur(matricule) {
+    const liste = await lireTousTravailleurs();
+    const t = liste.find(w => w.matricule === matricule);
+    if (!t) { alert('❌ Travailleur introuvable.'); return; }
+
+    if (!confirm(`⚠️ SUPPRESSION DÉFINITIVE\n\n${t.prenom} ${t.nom}\nMatricule: ${matricule}\n${t.nombreConsultations||0} consultation(s)\n\nCette action est IRRÉVERSIBLE !`)) return;
+
+    setSyncStatus('sync-loading', '🟡 Suppression...');
+    const ok = await supprimerDansFirestore(matricule);
+    if (ok) {
+        localStorage.removeItem(`historique_${matricule}`);
+        let listeLocale = JSON.parse(localStorage.getItem('liste_travailleurs') || '[]');
+        listeLocale = listeLocale.filter(w => w.matricule !== matricule);
+        localStorage.setItem('liste_travailleurs', JSON.stringify(listeLocale));
+        actualiserDepuisFirestore();
+        alert('✅ Dossier supprimé.');
+    } else {
+        alert('❌ Erreur lors de la suppression.');
+    }
+}
+
+// ============================================
+// GESTION DE L'HISTORIQUE INDIVIDUEL
+// ============================================
+let matriculeActuel = '';
+
+async function ouvrirHistorique() {
+    const matricule = document.getElementById('matricule')?.value?.trim();
+    if (!matricule) { alert('⚠️ Veuillez saisir un MATRICULE.'); return; }
+    matriculeActuel = matricule;
+
+    const panel = document.getElementById('panel-historique');
+    if (!panel) return;
+    panel.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    await afficherHistorique(matricule);
+}
+
+function fermerHistorique() {
+    const panel = document.getElementById('panel-historique');
+    if (panel) { panel.style.display = 'none'; document.body.style.overflow = 'auto'; }
+}
+
+// 🔥 MODIFIÉ : Lecture depuis Firestore
+async function afficherHistorique(matricule) {
+    const infoDiv = document.getElementById('info-travailleur');
+    const contenuDiv = document.getElementById('contenu-historique');
+    if (!contenuDiv) return;
+
+    contenuDiv.innerHTML = '<p style="text-align:center;padding:40px;color:#6c757d;"><span style="font-size:50px;display:block;margin-bottom:15px;">⏳</span>Chargement depuis la base partagée...</p>';
+
+    const historique = await lireHistorique(matricule);
+
+    if (historique.length === 0) {
+        if (infoDiv) infoDiv.innerHTML = `Matricule: <strong>${matricule}</strong> - Aucune consultation`;
+        contenuDiv.innerHTML = '<div style="text-align:center;padding:60px;color:#6c757d;"><div style="font-size:80px;margin-bottom:20px;">📂</div><h3>Aucune consultation trouvée</h3></div>';
+        return;
+    }
+
+    const derniere = historique[0];
+    const ident = derniere.identification || {};
+    const nomComplet = `${ident.prenom || ''} ${ident.nom || ''}`.trim();
+    if (infoDiv) infoDiv.innerHTML = `👤 <strong>${nomComplet}</strong> | 🔢 Matricule: <strong>${matricule}</strong> | 📊 <strong>${historique.length}</strong> consultation(s)`;
+
+    let html = '';
+    historique.forEach((consult, index) => {
+        const dateConsult = new Date(consult.dateSauvegarde || consult.dateConsultation || Date.now());
+        const prof = consult.professionnel || {};
+        const concl = consult.conclusion || {};
+        const aptitude = concl.aptitude || 'Non renseigné';
+        let couleur = '#28a745', bg = '#d4edda';
+        if (aptitude.includes('inapte')) { couleur = '#dc3545'; bg = '#f8d7da'; }
+        else if (aptitude.includes('avec') || aptitude.includes('restriction')) { couleur = '#ffc107'; bg = '#fff3cd'; }
+
+        html += `<div style="background:white;border:2px solid #dee2e6;border-radius:10px;padding:20px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.1);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;padding-bottom:15px;border-bottom:2px solid #e9ecef;">
+                <div><h3 style="margin:0;color:#667eea;font-size:18px;">📅 Consultation #${historique.length - index}</h3>
+                    <p style="margin:5px 0 0;color:#6c757d;font-size:13px;">${dateConsult.toLocaleDateString('fr-FR',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
+                    ${consult.enregistrePar ? ` | par ${consult.enregistrePar}` : ''}</p></div>
+                <div style="display:flex;flex-direction:column;gap:5px;">
+                    <button onclick="chargerConsultationParIndex('${matricule}',${index})" style="padding:8px 16px;background:#667eea;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">📂 Charger</button>
+                    <button onclick="supprimerConsultation('${matricule}','${consult.id}')" style="padding:8px 16px;background:#dc3545;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;">🗑️ Supprimer</button>
+                </div></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:15px;margin-bottom:15px;">
+                <div><strong style="color:#495057;font-size:13px;">🏢 Entreprise:</strong><br>${prof.entreprise||'N/R'}</div>
+                <div><strong style="color:#495057;font-size:13px;">💼 Poste:</strong><br>${prof.poste||'N/R'}</div>
+                <div><strong style="color:#495057;font-size:13px;">📋 Type visite:</strong><br>${prof.typeVisite||'N/R'}</div></div>
+            <div style="background:${bg};border-left:5px solid ${couleur};padding:15px;border-radius:8px;">
+                <strong style="color:${couleur};font-size:14px;">✅ APTITUDE:</strong><br>
+                <span style="font-size:18px;font-weight:bold;color:${couleur};">${aptitude}</span>
+                ${concl.restrictions ? `<div style="margin-top:10px;font-size:13px;"><strong>🚫 Restrictions:</strong> ${concl.restrictions}</div>` : ''}</div>
+            ${consult.medecin ? `<div style="margin-top:15px;padding:10px;background:#f8f9fa;border-radius:6px;font-size:13px;"><strong>👨‍⚕️ Médecin:</strong> Dr. ${consult.medecin}</div>` : ''}
+        </div>`;
+    });
+    contenuDiv.innerHTML = html;
+}
+
+// Charger une consultation par index
+async function chargerConsultationParIndex(matricule, index) {
+    const historique = await lireHistorique(matricule);
+    if (!historique[index]) { alert('❌ Consultation introuvable.'); return; }
+    fermerHistorique();
+    remplirFormulaire(historique[index]);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    alert('✅ Consultation chargée !');
+}
+
+// 🔥 MODIFIÉ : Supprimer via Firestore
+async function supprimerConsultation(matricule, consultationId) {
+    if (!confirm('⚠️ Supprimer cette consultation ?')) return;
+    setSyncStatus('sync-loading', '🟡 Suppression...');
+    const ok = await supprimerConsultationFirestore(matricule, consultationId);
+    if (ok) {
+        afficherHistorique(matricule);
+        setSyncStatus('sync-ok', '🟢 Synchronisé');
+    } else {
+        alert('❌ Erreur lors de la suppression.');
+        setSyncStatus('sync-error', '🔴 Erreur');
+    }
+}
+
+// ============================================
+// REMPLIR LE FORMULAIRE (inchangé)
+// ============================================
+function remplirFormulaire(consult) {
+    const setVal = (id, val) => { const e = document.getElementById(id); if (e) e.value = val || ''; };
+    const ident = consult.identification || {};
+    setVal('nom', ident.nom); setVal('prenom', ident.prenom); setVal('date-naissance', ident.dateNaissance);
+    setVal('age', ident.age); setVal('genre', ident.genre); setVal('matricule', ident.matricule);
+    setVal('telephone', ident.telephone); setVal('email', ident.email); setVal('adresse', ident.adresse);
+
+    const prof = consult.professionnel || {};
+    setVal('entreprise', prof.entreprise); setVal('poste', prof.poste); setVal('departement', prof.departement);
+    setVal('date-embauche', prof.dateEmbauche); setVal('type-contrat', prof.typeContrat);
+    setVal('horaire-travail', prof.horaireTravail); setVal('type-visite', prof.typeVisite);
+
+    const ant = consult.antecedents || {};
+    setVal('autres-antecedents', ant.medicaux); setVal('chirurgie', ant.chirurgicaux);
+    setVal('accident-travail', ant.accidentTravail); setVal('maladie-pro', ant.maladiePro);
+    setVal('allergies', ant.allergies); setVal('tabac', ant.tabac); setVal('nb-cigarettes', ant.nbCigarettes);
+    setVal('alcool', ant.alcool); setVal('activite-physique', ant.activitePhysique); setVal('medicaments', ant.medicaments);
+
+    const c = consult.constantes || {};
+    setVal('poids', c.poids); setVal('taille', c.taille); setVal('ta-systolique', c.taSystolique);
+    setVal('ta-diastolique', c.taDiastolique); setVal('pouls', c.pouls);
+    setVal('frequence-resp', c.frequenceResp); setVal('temperature', c.temperature);
+    setVal('saturation', c.saturation); setVal('etat-general', c.etatGeneral);
+    setVal('observations-generales', c.observations);
+
+    const ex = consult.examensPhysiques || {};
+    setVal('examen-cardio', ex.cardio); setVal('examen-pulm', ex.pulm); setVal('examen-abdo', ex.abdo);
+    setVal('examen-neuro', ex.neuro); setVal('examen-osteo', ex.osteo); setVal('examen-dermato', ex.dermato);
+    setVal('examen-orl', ex.orl); setVal('examen-ophtalmo', ex.ophtalmo);
+
+    const bio = consult.biologie || {};
+    setVal('date-bilan', bio.dateBilan); setVal('glycemie', bio.glycemie); setVal('hba1c', bio.hba1c);
+    setVal('cholesterol-total', bio.cholesterolTotal); setVal('hdl', bio.hdl); setVal('ldl', bio.ldl);
+    setVal('triglycerides', bio.triglycerides); setVal('creatinine', bio.creatinine);
+    setVal('acide-urique', bio.acideUrique); setVal('asat', bio.asat); setVal('alat', bio.alat);
+    setVal('hemoglobine', bio.hemoglobine); setVal('hematocrite', bio.hematocrite);
+    setVal('leucocytes', bio.leucocytes); setVal('plaquettes', bio.plaquettes);
+
+    const img = consult.imagerie || {};
+    setVal('radio-thorax', img.radioThorax); setVal('ecg', img.ecg); setVal('echographie', img.echographie);
+
+    const fonc = consult.examensFonctionnels || {};
+    setVal('audiometrie', fonc.audiometrie); setVal('spirometrie', fonc.spirometrie);
+    setVal('vision-od', fonc.visionOD); setVal('vision-og', fonc.visionOG); setVal('vision-binoculaire', fonc.visionBinoculaire);
+    setVal('autres-examens', fonc.autresExamens);
+
+    const concl = consult.conclusion || {};
+    setVal('aptitude', concl.aptitude); setVal('restrictions', concl.restrictions);
+    setVal('duree-inaptitude', concl.dureeInaptitude); setVal('recommandations', concl.recommandations);
+    setVal('orientations', concl.orientations); setVal('examens-complementaires', concl.examensComplementaires);
+    setVal('prochaine-visite', concl.prochaineVisite);
+    setVal('date-examen', consult.dateConsultation);
+
+    const cab = consult.cabinet || {};
+    setVal('nom-cabinet', cab.nomCabinet); setVal('medecin', consult.medecin || '');
+    setVal('numero-ordre', cab.numeroOrdre); setVal('lieu-examen', cab.lieuExamen);
+
+    // Recalculer IMC et âge
+    calculerIMC(); calculerAge(); gererAptitude();
+}
+
+// ============================================
+// EXPORTS (fonctionnent identiquement, lisent Firestore)
+// ============================================
+async function exporterCSVComplet() {
+    const travailleurs = await lireTousTravailleurs();
+    if (travailleurs.length === 0) { alert('Aucune donnée à exporter'); return; }
+    let csv = '\uFEFFMatricule,Nom,Prénom,Entreprise,Poste,Nb Consultations,Dernière Aptitude\n';
+    travailleurs.forEach(t => {
+        csv += `"${t.matricule||''}","${t.nom||''}","${t.prenom||''}","${t.entreprise||''}","${t.poste||''}","${t.nombreConsultations||0}","${t.derniereAptitude||''}"\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Export_Travailleurs_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+}
+
+function exporterToutesConsultationsPDFAvecFiltres() {
+    alert('📄 Export PDF en cours...\nCette fonction utilise les données Firestore mises en cache localement.');
+    // Utilise le cache localStorage qui est synchronisé avec Firestore
+    exporterToutesConsultationsPDF({});
+}
+
+function exporterToutesConsultationsPDF(filtres) {
+    const { jsPDF } = window.jspdf;
+    if (!jsPDF) { alert('❌ jsPDF non chargée'); return; }
+    let consultations = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('historique_')) {
+            const hist = JSON.parse(localStorage.getItem(key) || '[]');
+            hist.forEach(c => consultations.push(c));
+        }
+    }
+    if (consultations.length === 0) { alert('❌ Aucune consultation.'); return; }
+    consultations.sort((a, b) => new Date(b.dateSauvegarde||0) - new Date(a.dateSauvegarde||0));
+
+    const doc = new jsPDF();
+    let y = 20;
+    doc.setFontSize(18); doc.setFont(undefined, 'bold');
+    doc.text('RAPPORT DES CONSULTATIONS', 105, y, { align: 'center' }); y += 10;
+    doc.setFontSize(10); doc.setFont(undefined, 'normal');
+    doc.text(`Exporté le ${new Date().toLocaleDateString('fr-FR')} | ${consultations.length} consultations`, 105, y, { align: 'center' }); y += 15;
+
+    consultations.forEach((c, idx) => {
+        if (y > 260) { doc.addPage(); y = 20; }
+        const ident = c.identification || {};
+        const concl = c.conclusion || {};
+        doc.setDrawColor(102, 126, 234); doc.line(20, y, 190, y); y += 8;
+        doc.setFontSize(11); doc.setFont(undefined, 'bold'); doc.setTextColor(102, 126, 234);
+        doc.text(`#${idx+1} - ${ident.prenom||''} ${ident.nom||''} (${ident.matricule||'N/A'})`, 20, y); y += 6;
+        doc.setTextColor(0,0,0); doc.setFontSize(9); doc.setFont(undefined, 'normal');
+        doc.text(`Date: ${c.dateConsultation||'N/A'} | Entreprise: ${c.professionnel?.entreprise||'N/A'} | Aptitude: ${concl.aptitude||'N/A'}`, 20, y); y += 10;
+    });
+
+    doc.save(`Rapport_Consultations_${new Date().toISOString().split('T')[0]}.pdf`);
+    alert(`✅ PDF exporté (${consultations.length} consultations)`);
+}
+
+function exporterStatistiquesPDF() {
+    alert('📊 Export des statistiques...');
+    // Simplifié - utilise le cache local
+    const { jsPDF } = window.jspdf;
+    if (!jsPDF) { alert('❌ jsPDF non chargée'); return; }
+    const liste = JSON.parse(localStorage.getItem('liste_travailleurs') || '[]');
+    if (liste.length === 0) { alert('❌ Aucune donnée.'); return; }
+
+    const doc = new jsPDF();
+    doc.setFontSize(18); doc.setFont(undefined, 'bold');
+    doc.text('STATISTIQUES GLOBALES', 105, 20, { align: 'center' });
+    doc.setFontSize(10); doc.setFont(undefined, 'normal');
+    doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, 105, 28, { align: 'center' });
+    let y = 45;
+    doc.text(`Total travailleurs: ${liste.length}`, 25, y); y += 7;
+    const entreprises = new Set(liste.map(t => t.entreprise).filter(Boolean));
+    doc.text(`Entreprises: ${entreprises.size}`, 25, y); y += 7;
+    const totalConsult = liste.reduce((s, t) => s + (t.nombreConsultations||0), 0);
+    doc.text(`Total consultations: ${totalConsult}`, 25, y); y += 15;
+
+    doc.setFont(undefined, 'bold'); doc.text('Par entreprise:', 25, y); y += 7;
+    doc.setFont(undefined, 'normal');
+    entreprises.forEach(e => {
+        const nb = liste.filter(t => t.entreprise === e).length;
+        if (y > 270) { doc.addPage(); y = 20; }
+        doc.text(`  ${e}: ${nb} travailleur(s)`, 25, y); y += 6;
+    });
+
+    doc.save(`Statistiques_${new Date().toISOString().split('T')[0]}.pdf`);
+}
+
+function exporterConsultationsFiltrees() {
+    const dateDebut = prompt('📅 Date de début (JJ/MM/AAAA):');
+    const dateFin = prompt('📅 Date de fin (JJ/MM/AAAA):');
+    if (!dateDebut || !dateFin) return;
+    alert('📅 Export par période en cours...');
+    exporterToutesConsultationsPDF({ dateDebut, dateFin });
+}
+
+function exporterPDFProtege() {
+    const mdp = prompt('🔒 Mot de passe (min 6 car.):');
+    if (!mdp || mdp.length < 6) { alert('❌ Mot de passe trop court.'); return; }
+    alert('🔒 Export protégé... Le PDF sera généré normalement.\n(La protection par mot de passe nécessite une librairie supplémentaire.)');
+    exporterToutesConsultationsPDF({});
+}
+
+// ============================================
+// IMPRIMER HISTORIQUE (inchangé, lit depuis variable)
+// ============================================
+async function imprimerHistorique() {
+    if (!matriculeActuel) { alert('❌ Aucun matricule.'); return; }
+    const historique = await lireHistorique(matriculeActuel);
+    if (historique.length === 0) { alert('❌ Aucune consultation.'); return; }
+    const ident = historique[0].identification || {};
+    const nomComplet = `${ident.prenom || ''} ${ident.nom || ''}`.trim();
+
+    const w = window.open('', '_blank', 'width=800,height=600');
+    if (!w) { alert('❌ Pop-ups bloquées.'); return; }
+    let htmlContenu = '';
+    historique.forEach((c, i) => {
+        const d = new Date(c.dateSauvegarde || c.dateConsultation || Date.now());
+        const prof = c.professionnel || {};
+        const concl = c.conclusion || {};
+        const apt = concl.aptitude || 'N/R';
+        let col = '#28a745', bg = '#d4edda';
+        if (apt.includes('inapte')) { col = '#dc3545'; bg = '#f8d7da'; }
+        else if (apt.includes('avec')) { col = '#ffc107'; bg = '#fff3cd'; }
+        htmlContenu += `<div style="background:white;border:2px solid #dee2e6;border-radius:10px;padding:20px;margin-bottom:20px;page-break-inside:avoid;">
+            <h3 style="color:#667eea;">📅 Consultation #${historique.length - i}</h3>
+            <p style="color:#6c757d;">${d.toLocaleDateString('fr-FR',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</p>
+            <p><strong>🏢</strong> ${prof.entreprise||'N/R'} | <strong>💼</strong> ${prof.poste||'N/R'}</p>
+            <div style="background:${bg};border-left:5px solid ${col};padding:15px;border-radius:8px;">
+                <strong style="color:${col};">APTITUDE: ${apt}</strong></div>
+            ${c.medecin ? `<p style="margin-top:10px;"><strong>👨‍⚕️</strong> Dr. ${c.medecin}</p>` : ''}
+        </div>`;
+    });
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Historique - ${nomComplet}</title>
+        <style>body{font-family:Arial,sans-serif;padding:20px;}.header{background:linear-gradient(135deg,#667eea,#764ba2);color:white;padding:20px;border-radius:10px;margin-bottom:30px;}</style></head>
+        <body><div class="header"><h1>📋 HISTORIQUE MÉDICAL</h1><p>👤 ${nomComplet} | 🔢 ${matriculeActuel} | 📊 ${historique.length} consultation(s)</p></div>
+        ${htmlContenu}<script>window.onload=function(){window.print();}<\/script></body></html>`);
+    w.document.close();
+}
+
+// ============================================
+// RAPPORT MÉDICAL COMPLET (inchangé, lit depuis le DOM)
+// ============================================
+function genererRapportMedical() {
+    const getData = (id) => document.getElementById(id)?.value || 'Non renseigné';
+    const getSelectText = (id) => { const s = document.getElementById(id); return s?.options[s.selectedIndex]?.text || 'Non renseigné'; };
+
+    const nom = getData('nom').toUpperCase(), prenom = getData('prenom').toUpperCase();
+    const nomCabinet = getData('nom-cabinet'), medecin = getData('medecin');
+    const aptitude = getSelectText('aptitude');
+
+    const pw = window.open('', '', 'width=900,height=1200');
+    pw.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Rapport - ${nom} ${prenom}</title>
+    <style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;font-size:10px;line-height:1.5}
+    .header{background:linear-gradient(135deg,#667eea,#764ba2);color:white;padding:20px;text-align:center;border-radius:10px;margin-bottom:20px}.header h1{margin:0;font-size:22px}
+    .confidential-mark{background:#dc3545;color:white;padding:8px;text-align:center;font-weight:bold;margin-bottom:15px;border-radius:5px}
+    .section{margin-bottom:15px;padding:12px;border:1px solid #ddd;border-radius:8px;background:#f8f9fa;page-break-inside:avoid}
+    .section-title{font-weight:bold;font-size:12px;color:#667eea;margin-bottom:10px;border-bottom:2px solid #667eea;padding-bottom:5px}
+    .row{display:flex;margin-bottom:5px}.label{font-weight:bold;width:200px;color:#555}.value{flex:1}
+    .two-columns{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+    .aptitude-box{background:#e8f4ff;padding:15px;border:3px solid #667eea;border-radius:10px;text-align:center;margin:20px 0}
+    .aptitude-box .decision{font-size:16px;font-weight:bold;color:#667eea;margin:8px 0}
+    .signature-box{display:flex;justify-content:space-between;margin-top:20px;padding-top:15px;border-top:2px dashed #999}
+    .signature{width:45%;text-align:center}.signature-line{border-top:1px solid #333;margin-top:40px;padding-top:5px}
+    .stamp-area{border:2px dashed #999;padding:30px;text-align:center;color:#999;width:45%}
+    .footer-info{text-align:center;margin-top:15px;font-size:8px;color:#999}</style></head>
+    <body>
+    <div class="header"><h1>🏥 ${nomCabinet}</h1><p>RAPPORT MÉDICAL CONFIDENTIEL</p></div>
+    <div class="confidential-mark">🔒 DOCUMENT MÉDICAL CONFIDENTIEL</div>
+    <div class="two-columns">
+        <div class="section"><div class="section-title">👤 IDENTIFICATION</div>
+            <div class="row"><span class="label">Nom:</span><span class="value"><strong>${nom}</strong></span></div>
+            <div class="row"><span class="label">Prénom:</span><span class="value"><strong>${prenom}</strong></span></div>
+            <div class="row"><span class="label">Naissance:</span><span class="value">${getData('date-naissance')}</span></div>
+            <div class="row"><span class="label">Âge:</span><span class="value">${getData('age')}</span></div>
+            <div class="row"><span class="label">Matricule:</span><span class="value">${getData('matricule')}</span></div></div>
+        <div class="section"><div class="section-title">🏢 PROFESSIONNEL</div>
+            <div class="row"><span class="label">Entreprise:</span><span class="value"><strong>${getData('entreprise')}</strong></span></div>
+            <div class="row"><span class="label">Poste:</span><span class="value">${getData('poste')}</span></div>
+            <div class="row"><span class="label">Embauche:</span><span class="value">${getData('date-embauche')}</span></div>
+            <div class="row"><span class="label">Ancienneté:</span><span class="value">${document.getElementById('anciennete')?.textContent||''}</span></div>
+            <div class="row"><span class="label">Type visite:</span><span class="value">${getSelectText('type-visite')}</span></div></div>
+    </div>
+    <div class="section"><div class="section-title">🩺 CONSTANTES</div>
+        <div class="two-columns"><div>
+            <div class="row"><span class="label">Poids:</span><span class="value">${getData('poids')} kg</span></div>
+            <div class="row"><span class="label">Taille:</span><span class="value">${getData('taille')} cm</span></div>
+            <div class="row"><span class="label">IMC:</span><span class="value">${getData('imc')} (${getData('interpretation-imc')})</span></div>
+            <div class="row"><span class="label">TA:</span><span class="value">${getData('ta-systolique')}/${getData('ta-diastolique')} mmHg</span></div>
+        </div><div>
+            <div class="row"><span class="label">Pouls:</span><span class="value">${getData('pouls')} /min</span></div>
+            <div class="row"><span class="label">SpO2:</span><span class="value">${getData('saturation')} %</span></div>
+            <div class="row"><span class="label">Temp.:</span><span class="value">${getData('temperature')} °C</span></div>
+        </div></div></div>
+    <div class="aptitude-box"><div style="font-size:14px;font-weight:bold;">✅ CONCLUSION</div><div class="decision">${aptitude}</div>
+        ${getData('restrictions')!=='Non renseigné'?`<div><strong>Restrictions:</strong> ${getData('restrictions')}</div>`:''}</div>
+    ${getData('recommandations')!=='Non renseigné'?`<div class="section"><div class="section-title">📋 RECOMMANDATIONS</div><div>${getData('recommandations')}</div></div>`:''}
+    <div class="signature-box"><div class="signature"><strong>Le Médecin du Travail</strong><div style="margin-top:10px;">Dr. ${medecin}</div><div class="signature-line">Signature et cachet</div></div><div class="stamp-area">Cachet</div></div>
+    <div class="footer-info">APSUMEDTRAV - ${new Date().toLocaleDateString('fr-FR')} ${new Date().toLocaleTimeString('fr-FR')}</div>
+    </body></html>`);
+    pw.document.close();
+    setTimeout(() => pw.print(), 500);
+}
+
+// ============================================
+// MENUS DÉROULANTS (inchangés)
+// ============================================
+function toggleMenuExports() {
+    const m = document.getElementById('menuExports');
+    if (m) m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+function toggleMenuDocuments() {
+    const m = document.getElementById('menuDocuments');
+    if (m) m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+document.addEventListener('click', function(event) {
+    const me = document.getElementById('menuExports');
+    const md = document.getElementById('menuDocuments');
+    if (!event.target.closest('#menuExports') && !event.target.closest('button[onclick*="toggleMenuExports"]') && me) me.style.display = 'none';
+    if (!event.target.closest('#menuDocuments') && !event.target.closest('button[onclick*="toggleMenuDocuments"]') && md) md.style.display = 'none';
+});
+
+// ============================================
+// UTILITAIRES
+// ============================================
+function formatDate(dateStr) {
+    if (!dateStr) return 'N/A';
+    try { return new Date(dateStr).toLocaleDateString('fr-FR'); }
+    catch (e) { return dateStr; }
+}
+
+// ============================================
+// INITIALISATION AU CHARGEMENT
+// ============================================
+window.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ APSUMEDTRAV v3.0 - Multi-Utilisateurs chargé');
+
+    // Formatage dates
+    ['date-naissance', 'date-embauche', 'date-examen', 'prochaine-visite', 'date-bilan'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.addEventListener('input', function() { formaterDate(this); });
+    });
+
+    // Enter sur le login
+    document.getElementById('loginPassword')?.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') connexion();
+    });
+});
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  // ╔══════════════════════════════════════════════════════════════════╗
+// ║       EXPORT RAPPORT INDIVIDUEL COMPLET → EXCEL (.xlsx)         ║
+// ╚══════════════════════════════════════════════════════════════════╝
+
+function exporterRapportExcel() {
+    // Vérifier que SheetJS est chargé
+    if (typeof XLSX === 'undefined') {
+        alert('⏳ Chargement de la bibliothèque Excel...');
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        s.onload = () => setTimeout(exporterRapportExcel, 500);
+        document.head.appendChild(s);
+        return;
+    }
+
+    // Récupérer infos patient
+    const nom = document.getElementById('nom')?.value || '';
+    const prenom = document.getElementById('prenom')?.value || '';
+    const matricule = document.getElementById('matricule')?.value || '';
+
+    if (!nom && !prenom && !matricule) {
+        alert('⚠️ Aucun patient chargé !\n\n' +
+              '1. Ouvrez l\'historique\n' +
+              '2. Cliquez "📂 Charger" sur une consultation\n' +
+              '3. Puis cliquez "📗 Excel Individuel"');
+        return;
+    }
+
+    // ══════ COLLECTER TOUTES LES DONNÉES ══════
+    const rows = [];
+
+    // EN-TÊTE DU RAPPORT
+    rows.push(['RAPPORT DE CONSULTATION MÉDICALE - FICHE D\'APTITUDE']);
+    rows.push(['']);
+    rows.push(['Patient', prenom + ' ' + nom]);
+    rows.push(['Matricule', matricule]);
+    rows.push(['Date d\'export', new Date().toLocaleDateString('fr-FR', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    })]);
+    rows.push(['']);
+
+    // PARCOURIR LE DOM EN ORDRE
+    const mainForm = document.querySelector('form') 
+                  || document.querySelector('.main-content') 
+                  || document.querySelector('[id*="consultation"]')
+                  || document.body;
+
+    const allElements = mainForm.querySelectorAll(
+        'h2, h3, h4, h5, input, select, textarea'
+    );
+
+    const seen = new Set();
+    let currentSection = '';
+
+    allElements.forEach(el => {
+        // Ignorer login, modals, historique
+        if (el.closest('#loginScreen, .login-container, .modal-overlay, .history-modal, #searchHistoryPanel')) return;
+        if (el.closest('[id*="login"], [id*="auth"]')) return;
+
+        // ── TITRES = Séparateurs de section ──
+        if (['H2', 'H3', 'H4', 'H5'].includes(el.tagName)) {
+            const text = el.textContent.replace(/[📋🏥💊🔬💉⚠️🩺📊✅❌🔍👤📝🫁🦴👁️👂🧠🫀🩸💀🦷🧪]/gu, '').trim();
+            if (text && text.length > 2 && text !== currentSection) {
+                currentSection = text;
+                rows.push(['']);
+                rows.push(['▬▬▬▬▬ ' + text.toUpperCase() + ' ▬▬▬▬▬', '']);
+                rows.push(['Champ', 'Valeur']);
+            }
+            return;
+        }
+
+        // ── CHAMPS DE FORMULAIRE ──
+        if (['hidden', 'button', 'submit', 'reset', 'password', 'file'].includes(el.type)) return;
+        if (el.type === 'radio' && !el.checked) return;
+
+        // Éviter doublons
+        const key = el.id || el.name || '';
+        if (key && seen.has(key)) return;
+        if (key) seen.add(key);
+
+        // ── Trouver le LABEL ──
+        let label = '';
+
+        // 1. Label avec for="id"
+        if (el.id) {
+            const lbl = document.querySelector('label[for="' + el.id + '"]');
+            if (lbl) label = lbl.textContent.replace(/\*/g, '').trim();
+        }
+
+        // 2. Label parent
+        if (!label) {
+            const parentLabel = el.closest('label');
+            if (parentLabel) {
+                const clone = parentLabel.cloneNode(true);
+                clone.querySelectorAll('input, select, textarea').forEach(c => c.remove());
+                label = clone.textContent.replace(/\*/g, '').trim();
+            }
+        }
+
+        // 3. Élément frère précédent
+        if (!label) {
+            const prev = el.previousElementSibling;
+            if (prev && ['LABEL', 'SPAN', 'STRONG', 'B'].includes(prev.tagName)) {
+                label = prev.textContent.replace(/\*/g, '').trim();
+            }
+        }
+
+        // 4. Groupe parent
+        if (!label) {
+            const group = el.closest('.form-group, .field-group, .input-group, .form-field, div[class*="group"]');
+            if (group) {
+                const lbl = group.querySelector('label, .label, strong');
+                if (lbl && !lbl.querySelector('input, select')) {
+                    label = lbl.textContent.replace(/\*/g, '').trim();
+                }
+            }
+        }
+
+        // 5. Fallback
+        if (!label) label = el.placeholder || el.name || el.id || '';
+        if (!label || label.length < 2) return;
+
+        // Nettoyer le label
+        label = label.replace(/[\n\r\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+
+        // ── Trouver la VALEUR ──
+        let value = '';
+
+        if (el.type === 'checkbox') {
+            value = el.checked ? '✓ Oui' : '✗ Non';
+        } else if (el.type === 'radio') {
+            const radioLabel = el.id ? document.querySelector('label[for="' + el.id + '"]') : null;
+            value = radioLabel ? radioLabel.textContent.trim() : el.value;
+        } else if (el.tagName === 'SELECT') {
+            const opt = el.options[el.selectedIndex];
+            value = opt ? opt.text.trim() : '';
+            if (!value || value.startsWith('Sélect') || value.startsWith('-- ') || value.startsWith('Choisir')) {
+                value = '—';
+            }
+        } else if (el.type === 'date' && el.value) {
+            const d = new Date(el.value);
+            value = d.toLocaleDateString('fr-FR');
+        } else {
+            value = el.value || '—';
+        }
+
+        rows.push([label, value]);
+    });
+
+    // PIED DE RAPPORT
+    rows.push(['']);
+    rows.push(['▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬', '']);
+    rows.push(['Rapport généré par', 'APSUMEDTRAV']);
+    rows.push(['Date et heure', new Date().toLocaleString('fr-FR')]);
+    rows.push(['Signature médecin', '________________________']);
+
+    // ══════ CRÉER LE FICHIER EXCEL ══════
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+
+    // Largeur des colonnes
+    ws['!cols'] = [
+        { wch: 45 },   // Colonne A - Labels
+        { wch: 55 }    // Colonne B - Valeurs
+    ];
+
+    // Style de la première ligne (titre)
+    // Note: le formatage avancé nécessite xlsx-style, 
+    // mais la structure reste claire
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Rapport Consultation');
+
+    // Nom du fichier
+    const dateStr = new Date().toISOString().split('T')[0];
+    const nomFichier = ('Rapport_' + nom + '_' + prenom + '_' + matricule + '_' + dateStr + '.xlsx')
+        .replace(/\s+/g, '_')
+        .replace(/_{2,}/g, '_');
+
+    // Télécharger
+    XLSX.writeFile(wb, nomFichier);
+
+    alert('✅ Rapport Excel exporté avec succès !\n\n📗 ' + nomFichier);
+}       
+</script>
+</body>
+

@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratoire  - APSUMEDTRAV</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f2f5; color: #333; }
+
+        .navbar {
+            background: linear-gradient(135deg, #1a5276, #2e86c1);
+            color: white; padding: 15px 30px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .navbar h1 { font-size: 1.3em; }
+        .navbar a { color: white; text-decoration: none; margin-left: 20px; 
+                     padding: 8px 16px; border-radius: 5px; background: rgba(255,255,255,0.15); }
+        .navbar a:hover { background: rgba(255,255,255,0.3); }
+
+        .controls {
+            background: white; padding: 15px 30px; display: flex; gap: 10px; 
+            flex-wrap: wrap; align-items: center;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .controls button {
+            padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;
+            font-size: 14px; font-weight: bold; transition: 0.2s;
+        }
+        .btn-new { background: #27ae60; color: white; }
+        .btn-save { background: #2e86c1; color: white; }
+        .btn-print { background: #8e44ad; color: white; }
+        .btn-list { background: #f39c12; color: white; }
+        .btn-delete { background: #e74c3c; color: white; }
+        .controls button:hover { opacity: 0.85; transform: translateY(-1px); }
+
+        .container { max-width: 1100px; margin: 20px auto; padding: 0 20px; }
+
+        /* ===== REPORT STYLES ===== */
+        .report {
+            background: white; padding: 40px; border-radius: 10px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        }
+        .report-header { text-align: center; margin-bottom: 25px; border-bottom: 3px double #1a5276; padding-bottom: 15px; }
+        .report-header .lab-name { font-size: 1.5em; font-weight: bold; color: #1a5276; }
+        .report-header .lab-address { font-size: 0.85em; color: #666; margin-top: 5px; }
+        .report-header .report-title { font-size: 1.3em; font-weight: bold; margin-top: 10px; 
+                                        color: #2e86c1; letter-spacing: 2px; }
+
+        .patient-info { margin-bottom: 20px; }
+        .patient-info h3 { background: #1a5276; color: white; padding: 8px 15px; border-radius: 5px; 
+                           margin-bottom: 10px; font-size: 0.95em; }
+        .patient-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; }
+        .patient-grid label { font-weight: bold; font-size: 0.85em; color: #555; }
+        .patient-grid input, .patient-grid select {
+            width: 100%; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .section { margin-top: 25px; }
+        .section-title {
+            background: #1a5276; color: white; padding: 8px 15px; border-radius: 5px;
+            font-size: 0.95em; margin-bottom: 0;
+        }
+        .sub-title {
+            background: #d5e8f0; color: #1a5276; padding: 4px 15px; font-weight: bold;
+            font-size: 0.85em;
+        }
+
+        table.results { width: 100%; border-collapse: collapse; font-size: 0.82em; margin-bottom: 5px; }
+        table.results th {
+            background: #2e86c1; color: white; padding: 6px 8px; text-align: left;
+            font-size: 0.8em; text-transform: uppercase;
+        }
+        table.results td { padding: 5px 8px; border-bottom: 1px solid #eee; vertical-align: middle; }
+        table.results tr:hover { background: #f7fbff; }
+        table.results input {
+            width: 100%; padding: 4px 6px; border: 1px solid #ddd; border-radius: 3px;
+            font-size: 0.95em;
+        }
+        table.results input:focus { border-color: #2e86c1; outline: none; box-shadow: 0 0 3px rgba(46,134,193,0.3); }
+        table.results .ref { color: #666; font-size: 0.9em; }
+        table.results .libelle { font-weight: bold; white-space: nowrap; }
+        table.results .organ { background: #e8f4e8; font-weight: bold; color: #27ae60; font-size: 0.8em; }
+
+        .interpretation-normale { color: #27ae60; font-weight: bold; }
+        .interpretation-elevee { color: #e74c3c; font-weight: bold; }
+        .interpretation-basse { color: #f39c12; font-weight: bold; }
+
+        .report-footer { margin-top: 30px; border-top: 2px solid #1a5276; padding-top: 15px;
+                         display: flex; justify-content: space-between; }
+        .report-footer .field label { font-weight: bold; font-size: 0.85em; }
+        .report-footer .field input { border: 1px solid #ddd; padding: 4px 8px; border-radius: 3px; }
+
+        .signature-area { text-align: right; margin-top: 20px; }
+        .signature-area .line { border-top: 1px solid #333; width: 250px; margin-left: auto; margin-top: 40px; padding-top: 5px; }
+
+        /* === MODAL LIST === */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: white; border-radius: 10px; padding: 25px; width: 90%; max-width: 800px;
+            max-height: 80vh; overflow-y: auto;
+        }
+        .modal h2 { margin-bottom: 15px; color: #1a5276; }
+        .modal table { width: 100%; border-collapse: collapse; }
+        .modal table th { background: #1a5276; color: white; padding: 10px; text-align: left; }
+        .modal table td { padding: 8px 10px; border-bottom: 1px solid #eee; }
+        .modal table tr:hover { background: #f0f7ff; cursor: pointer; }
+        .modal .close-btn { float: right; background: #e74c3c; color: white; border: none; 
+                            padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+
+        /* === PRINT === */
+        @media print {
+            body { background: white; }
+            .navbar, .controls, .modal-overlay { display: none !important; }
+            .container { margin: 0; padding: 0; max-width: 100%; }
+            .report { box-shadow: none; padding: 20px; border-radius: 0; }
+            input, select { border: none !important; background: transparent !important; 
+                           box-shadow: none !important; padding: 2px !important; }
+            .section-title { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            table.results th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .patient-info h3 { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .report-header { border-bottom: 2px double #000; }
+            .report { font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<div class="navbar">
+    <h1>🔬 Laboratoire - APSUMEDTRAV</h1>
+    <div>
+        <a href="/APSUMEDTRAV.html">🏠 Accueil</a>
+        <a href="/laboratoire">🔬 Labo</a>
+    </div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls no-print">
+    <button class="btn-new" onclick="nouveauResultat()">➕ Nouveau</button>
+    <button class="btn-save" onclick="sauvegarder()">💾 Sauvegarder</button>
+    <button class="btn-print" onclick="window.print()">🖨️ Imprimer</button>
+    <button class="btn-list" onclick="chargerListe()">📋 Liste des résultats</button>
+    <button class="btn-delete" onclick="supprimerResultat()">🗑️ Supprimer</button>
+    <span id="statusMsg" style="margin-left:15px; font-weight:bold;"></span>
+    <span id="currentId" style="margin-left:auto; color:#888; font-size:0.85em;"></span>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="container">
+<div class="report" id="report">
+
+    <!-- HEADER -->
+    <div class="report-header">
+        <div class="lab-name">🏥 </div>
+        <div class="lab-address"> </div>
+        <div class="report-title">RENDU DES RÉSULTATS DE LABORATOIRE</div>
+    </div>
+
+    <!-- PATIENT IDENTIFICATION -->
+    <div class="patient-info">
+        <h3>📋 IDENTIFICATION DU PATIENT</h3>
+        <div class="patient-grid">
+            <div><label>NOM</label><input type="text" id="pNom" placeholder="Nom du patient"></div>
+            <div><label>PRÉNOM</label><input type="text" id="pPrenom" placeholder="Prénom"></div>
+            <div><label>DATE DE NAISSANCE</label><input type="date" id="pDob"></div>
+            <div><label>ÂGE</label><input type="text" id="pAge" readonly style="background:#f5f5f5;"></div>
+            <div><label>GENRE</label>
+                <select id="pGenre"><option value="M">Masculin</option><option value="F">Féminin</option></select>
+            </div>
+            <div><label>STATUT</label>
+                <select id="pStatut"><option value="PRIVE">PRIVÉ</option><option value="ENTREPRISE">ENTREPRISE</option><option value="ASSURANCE">ASSURANCE</option></select>
+            </div>
+            <div><label>ADRESSE</label><input type="text" id="pAdresse" placeholder="Adresse"></div>
+            <div><label>NUMÉRO</label><input type="text" id="pNumero" placeholder="N° dossier"></div>
+            <div><label>PRÉLEVÉ PAR</label><input type="text" id="pPrelevePar" value=" "></div>
+            <div><label>VALIDÉ PAR</label><input type="text" id="pValidePar" value=" "></div>
+            <div><label>DATE PRÉLÈVEMENT</label><input type="date" id="pDatePrelev"></div>
+            <div><label>HEURE PRÉLÈVEMENT</label><input type="time" id="pHeurePrelev"></div>
+        </div>
+    </div>
+
+    <!-- 1. HEMATOLOGIE -->
+    <div class="section">
+        <div class="section-title">1. HÉMATOLOGIE</div>
+        <table class="results" id="tableHemato">
+            <thead>
+                <tr>
+                    <th style="width:15%">LIBELLÉ</th>
+                    <th style="width:15%">VALEUR TROUVÉE</th>
+                    <th style="width:15%">VALEUR DE RÉFÉRENCE</th>
+                    <th style="width:20%">SIGNIFICATION</th>
+                    <th style="width:15%">INTERPRÉTATION</th>
+                    <th style="width:20%">RECOMMANDATIONS</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="libelle">GB</td>
+                    <td><input type="text" data-key="gb" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">5 - 11.6 ×10⁹/L</td>
+                    <td>Globules blancs</td>
+                    <td><input type="text" data-key="gb_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="gb_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">LYMPHOCYTE</td>
+                    <td><input type="text" data-key="lympho" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">1.3 - 4 ×10⁹/L</td>
+                    <td>Lymphocytes</td>
+                    <td><input type="text" data-key="lympho_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="lympho_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">MID</td>
+                    <td><input type="text" data-key="mid" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">0.3 - 1 ×10⁹/L</td>
+                    <td>Monocytes, éosinophiles, basophiles</td>
+                    <td><input type="text" data-key="mid_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="mid_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">GRANULOCYTE</td>
+                    <td><input type="text" data-key="grano" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">2.4 - 7.6 ×10⁹/L</td>
+                    <td>Granulocytes</td>
+                    <td><input type="text" data-key="grano_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="grano_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">LYMPHOCYTE %</td>
+                    <td><input type="text" data-key="lympho_pct" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">19.1 - 48.5 %</td>
+                    <td></td>
+                    <td><input type="text" data-key="lympho_pct_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="lympho_pct_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">MID %</td>
+                    <td><input type="text" data-key="mid_pct" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">4.5 - 12.1 %</td>
+                    <td></td>
+                    <td><input type="text" data-key="mid_pct_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="mid_pct_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">GRANULOCYTE %</td>
+                    <td><input type="text" data-key="grano_pct" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">43.6 - 73.4 %</td>
+                    <td></td>
+                    <td><input type="text" data-key="grano_pct_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="grano_pct_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">GR</td>
+                    <td><input type="text" data-key="gr" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">4.33 - 5.78 ×10¹²/L</td>
+                    <td>Globules rouges</td>
+                    <td><input type="text" data-key="gr_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="gr_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">HGB</td>
+                    <td><input type="text" data-key="hgb" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">13.2 - 17.3 g/dl</td>
+                    <td>Hémoglobine</td>
+                    <td><input type="text" data-key="hgb_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="hgb_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">HCT</td>
+                    <td><input type="text" data-key="hct" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">39.9 - 53.9 %</td>
+                    <td>Hématocrite</td>
+                    <td><input type="text" data-key="hct_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="hct_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">VGM</td>
+                    <td><input type="text" data-key="vgm" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">84 - 98 fl</td>
+                    <td>Volume globulaire moyen</td>
+                    <td><input type="text" data-key="vgm_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="vgm_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">TCMH</td>
+                    <td><input type="text" data-key="tcmh" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">27.5 - 32.4 pg</td>
+                    <td>Teneur corpusculaire moyenne en Hb</td>
+                    <td><input type="text" data-key="tcmh_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="tcmh_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">CCMH</td>
+                    <td><input type="text" data-key="ccmh" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">31.7 - 34.4 g/dl</td>
+                    <td>Concentration corpusculaire moyenne en Hb</td>
+                    <td><input type="text" data-key="ccmh_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="ccmh_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">IDRc</td>
+                    <td><input type="text" data-key="idrc" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">11.1 - 14 %</td>
+                    <td>Indice distribution GR</td>
+                    <td><input type="text" data-key="idrc_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="idrc_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr style="background:#f0f7ff;"><td colspan="6" style="height:8px;"></td></tr>
+                <tr>
+                    <td class="libelle">PLT</td>
+                    <td><input type="text" data-key="plt" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">156 - 342 ×10³/L</td>
+                    <td>Plaquettes (coagulation)</td>
+                    <td><input type="text" data-key="plt_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="plt_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">THT</td>
+                    <td><input type="text" data-key="tht" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">0.16 - 0.36</td>
+                    <td>Thrombocrite</td>
+                    <td><input type="text" data-key="tht_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="tht_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">VPM</td>
+                    <td><input type="text" data-key="vpm" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">8.3 - 12.1 fl</td>
+                    <td>Volume plaquettaire moyen</td>
+                    <td><input type="text" data-key="vpm_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="vpm_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">IDPc</td>
+                    <td><input type="text" data-key="idpc" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">37.8 - 43.6</td>
+                    <td>Indice distribution plaquettes</td>
+                    <td><input type="text" data-key="idpc_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="idpc_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">P-LCC</td>
+                    <td><input type="text" data-key="plcc" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">55 - 139 ×10⁹/L</td>
+                    <td>Activation plaquettes</td>
+                    <td><input type="text" data-key="plcc_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="plcc_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">P-LCR</td>
+                    <td><input type="text" data-key="plcr" data-cat="hematologie" placeholder="—"></td>
+                    <td class="ref">25.3 - 53.8</td>
+                    <td>Rapport grandes cellules plaquettes</td>
+                    <td><input type="text" data-key="plcr_interp" data-cat="hematologie" placeholder="—"></td>
+                    <td><input type="text" data-key="plcr_reco" data-cat="hematologie" placeholder="—"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 2. BIOCHIMIE -->
+    <div class="section">
+        <div class="section-title">2. BIOCHIMIE</div>
+        <table class="results" id="tableBiochimie">
+            <thead>
+                <tr>
+                    <th style="width:8%">ORGANE</th>
+                    <th style="width:14%">LIBELLÉ</th>
+                    <th style="width:14%">VALEUR TROUVÉE</th>
+                    <th style="width:17%">VALEUR DE RÉFÉRENCE</th>
+                    <th style="width:14%">INTERPRÉTATION</th>
+                    <th style="width:20%">RECOMMANDATIONS</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="organ" rowspan="2">FOIE</td>
+                    <td class="libelle">ASAT</td>
+                    <td><input type="text" data-key="asat" data-cat="biochimie" placeholder="—"></td>
+                    <td class="ref">3.12 - 38 UI/L</td>
+                    <td><input type="text" data-key="asat_interp" data-cat="biochimie" placeholder="—"></td>
+                    <td><input type="text" data-key="asat_reco" data-cat="biochimie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">ALAT</td>
+                    <td><input type="text" data-key="alat" data-cat="biochimie" placeholder="—"></td>
+                    <td class="ref">20 - 40 UI/L</td>
+                    <td><input type="text" data-key="alat_interp" data-cat="biochimie" placeholder="—"></td>
+                    <td><input type="text" data-key="alat_reco" data-cat="biochimie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="organ" rowspan="2">REIN</td>
+                    <td class="libelle">URÉE</td>
+                    <td><input type="text" data-key="uree" data-cat="biochimie" placeholder="—"></td>
+                    <td class="ref">15 - 45 mg/dl</td>
+                    <td><input type="text" data-key="uree_interp" data-cat="biochimie" placeholder="—"></td>
+                    <td><input type="text" data-key="uree_reco" data-cat="biochimie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">CRÉATININE</td>
+                    <td><input type="text" data-key="creat" data-cat="biochimie" placeholder="—"></td>
+                    <td class="ref">0.6 - 1.4 mg/dl</td>
+                    <td><input type="text" data-key="creat_interp" data-cat="biochimie" placeholder="—"></td>
+                    <td><input type="text" data-key="creat_reco" data-cat="biochimie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="organ">PROSTATE</td>
+                    <td class="libelle">PSA TOTAL</td>
+                    <td><input type="text" data-key="psa" data-cat="biochimie" placeholder="—"></td>
+                    <td class="ref">0 - 4 ng/ml</td>
+                    <td><input type="text" data-key="psa_interp" data-cat="biochimie" placeholder="—"></td>
+                    <td><input type="text" data-key="psa_reco" data-cat="biochimie" placeholder="—"></td>
+                </tr>
+                <tr style="background:#f0f7ff;"><td colspan="6" style="height:5px;"></td></tr>
+                <tr>
+                    <td class="organ" rowspan="4">PROFIL LIPIDIQUE</td>
+                    <td class="libelle">CHOLESTÉROL TOTAL</td>
+                    <td><input type="text" data-key="chol_total" data-cat="biochimie" placeholder="—"></td>
+                    <td class="ref">120 - 200 mg/dl</td>
+                    <td><input type="text" data-key="chol_total_interp" data-cat="biochimie" placeholder="—"></td>
+                    <td><input type="text" data-key="chol_total_reco" data-cat="biochimie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">CHOL LDL</td>
+                    <td><input type="text" data-key="chol_ldl" data-cat="biochimie" placeholder="—"></td>
+                    <td class="ref">100 - 160 mg/dl</td>
+                    <td><input type="text" data-key="chol_ldl_interp" data-cat="biochimie" placeholder="—"></td>
+                    <td><input type="text" data-key="chol_ldl_reco" data-cat="biochimie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">CHOL HDL</td>
+                    <td><input type="text" data-key="chol_hdl" data-cat="biochimie" placeholder="—"></td>
+                    <td class="ref">50 - 80 mg/dl</td>
+                    <td><input type="text" data-key="chol_hdl_interp" data-cat="biochimie" placeholder="—"></td>
+                    <td><input type="text" data-key="chol_hdl_reco" data-cat="biochimie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">TRIGLYCÉRIDES</td>
+                    <td><input type="text" data-key="trigly" data-cat="biochimie" placeholder="—"></td>
+                    <td class="ref">F: 35-135 / H: 40-160</td>
+                    <td><input type="text" data-key="trigly_interp" data-cat="biochimie" placeholder="—"></td>
+                    <td><input type="text" data-key="trigly_reco" data-cat="biochimie" placeholder="—"></td>
+                </tr>
+                <tr style="background:#f0f7ff;"><td colspan="6" style="height:5px;"></td></tr>
+                <tr>
+                    <td class="organ">GLYCÉMIE</td>
+                    <td class="libelle">GLYCÉMIE À JEUN</td>
+                    <td><input type="text" data-key="glycemie" data-cat="biochimie" placeholder="—"></td>
+                    <td class="ref">60 - 120 mg/dl</td>
+                    <td><input type="text" data-key="glycemie_interp" data-cat="biochimie" placeholder="—"></td>
+                    <td><input type="text" data-key="glycemie_reco" data-cat="biochimie" placeholder="—"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 3. SEROLOGIE -->
+    <div class="section">
+        <div class="section-title">3. SÉROLOGIE</div>
+        <table class="results" id="tableSerologie">
+            <thead>
+                <tr>
+                    <th style="width:25%">TEST</th>
+                    <th style="width:25%">RÉSULTAT</th>
+                    <th style="width:50%">OBSERVATIONS</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="libelle">HIV</td>
+                    <td>
+                        <select data-key="hiv" data-cat="serologie">
+                            <option value="">—</option>
+                            <option value="NON REACTIF">NON RÉACTIF</option>
+                            <option value="REACTIF">RÉACTIF</option>
+                        </select>
+                    </td>
+                    <td><input type="text" data-key="hiv_obs" data-cat="serologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">HBs (Hépatite B)</td>
+                    <td>
+                        <select data-key="hbs" data-cat="serologie">
+                            <option value="">—</option>
+                            <option value="NON REACTIF">NON RÉACTIF</option>
+                            <option value="REACTIF">RÉACTIF</option>
+                        </select>
+                    </td>
+                    <td><input type="text" data-key="hbs_obs" data-cat="serologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">HCV (Hépatite C)</td>
+                    <td>
+                        <select data-key="hcv" data-cat="serologie">
+                            <option value="">—</option>
+                            <option value="NON REACTIF">NON RÉACTIF</option>
+                            <option value="REACTIF">RÉACTIF</option>
+                        </select>
+                    </td>
+                    <td><input type="text" data-key="hcv_obs" data-cat="serologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">SYPHILIS</td>
+                    <td>
+                        <select data-key="syphilis" data-cat="serologie">
+                            <option value="">—</option>
+                            <option value="NON REACTIF">NON RÉACTIF</option>
+                            <option value="REACTIF">RÉACTIF</option>
+                        </select>
+                    </td>
+                    <td><input type="text" data-key="syphilis_obs" data-cat="serologie" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">GROUPE SANGUIN</td>
+                    <td>
+                        <select data-key="groupe" data-cat="serologie">
+                            <option value="">—</option>
+                            <option value="A+">A Rhésus +</option><option value="A-">A Rhésus -</option>
+                            <option value="B+">B Rhésus +</option><option value="B-">B Rhésus -</option>
+                            <option value="AB+">AB Rhésus +</option><option value="AB-">AB Rhésus -</option>
+                            <option value="O+">O Rhésus +</option><option value="O-">O Rhésus -</option>
+                        </select>
+                    </td>
+                    <td><input type="text" data-key="groupe_obs" data-cat="serologie" placeholder="—"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 4. URINES -->
+    <div class="section">
+        <div class="section-title">4. EXAMEN DES URINES SOUS BANDELETTE (STRIP TEST)</div>
+        <table class="results" id="tableUrines">
+            <thead>
+                <tr>
+                    <th style="width:20%">PARAMÈTRE</th>
+                    <th style="width:20%">RÉSULTAT</th>
+                    <th style="width:25%">VALEUR NORMALE</th>
+                    <th style="width:35%">OBSERVATIONS</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="libelle">URO (Urobilinogène)</td>
+                    <td><input type="text" data-key="uro" data-cat="urines" placeholder="—"></td>
+                    <td class="ref">NORMAL</td>
+                    <td><input type="text" data-key="uro_obs" data-cat="urines" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">BLD (Sang)</td>
+                    <td><input type="text" data-key="bld" data-cat="urines" placeholder="—"></td>
+                    <td class="ref">Négatif ( - )</td>
+                    <td><input type="text" data-key="bld_obs" data-cat="urines" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">BIL (Bilirubine)</td>
+                    <td><input type="text" data-key="bil" data-cat="urines" placeholder="—"></td>
+                    <td class="ref">Négatif ( - )</td>
+                    <td><input type="text" data-key="bil_obs" data-cat="urines" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">KET (Cétones)</td>
+                    <td><input type="text" data-key="ket" data-cat="urines" placeholder="—"></td>
+                    <td class="ref">Négatif ( - )</td>
+                    <td><input type="text" data-key="ket_obs" data-cat="urines" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">LEU (Leucocytes)</td>
+                    <td><input type="text" data-key="leu" data-cat="urines" placeholder="—"></td>
+                    <td class="ref">Négatif ( - )</td>
+                    <td><input type="text" data-key="leu_obs" data-cat="urines" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">PRO (Protéines)</td>
+                    <td><input type="text" data-key="pro" data-cat="urines" placeholder="—"></td>
+                    <td class="ref">Négatif ( - )</td>
+                    <td><input type="text" data-key="pro_obs" data-cat="urines" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">pH</td>
+                    <td><input type="text" data-key="ph" data-cat="urines" placeholder="—"></td>
+                    <td class="ref">5.0 - 8.0</td>
+                    <td><input type="text" data-key="ph_obs" data-cat="urines" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">NITRO (Nitrites)</td>
+                    <td><input type="text" data-key="nitro" data-cat="urines" placeholder="—"></td>
+                    <td class="ref">Négatif ( - )</td>
+                    <td><input type="text" data-key="nitro_obs" data-cat="urines" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">SG (Densité)</td>
+                    <td><input type="text" data-key="sg" data-cat="urines" placeholder="—"></td>
+                    <td class="ref">1.005 - 1.030</td>
+                    <td><input type="text" data-key="sg_obs" data-cat="urines" placeholder="—"></td>
+                </tr>
+                <tr>
+                    <td class="libelle">VC (Vitamine C)</td>
+                    <td><input type="text" data-key="vc" data-cat="urines" placeholder="—"></td>
+                    <td class="ref">Négatif ( - )</td>
+                    <td><input type="text" data-key="vc_obs" data-cat="urines" placeholder="—"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="report-footer">
+        <div class="field">
+            <label>DATE DU RENDU :</label>
+            <input type="date" id="pDateRendu">
+        </div>
+        <div class="field">
+            <label>HEURE :</label>
+            <input type="time" id="pHeureRendu">
+        </div>
+    </div>
+    <div class="signature-area">
+        <strong id="sigValidePar">Validé par : Dr " "</strong>
+        <div class="line">Signature</div>
+    </div>
+
+</div>
+</div>
+
+<!-- MODAL LISTE -->
+<div class="modal-overlay" id="modalListe">
+    <div class="modal">
+        <button class="close-btn" onclick="fermerModal()">✕ Fermer</button>
+        <h2>📋 Liste des résultats de laboratoire</h2>
+        <table>
+            <thead>
+                <tr><th>#</th><th>Nom</th><th>Prénom</th><th>Date prélèvement</th><th>Date rendu</th><th>Action</th></tr>
+            </thead>
+            <tbody id="listeResultats"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let currentResultId = null;
+
+    // ===== Calcul âge automatique =====
+    document.getElementById('pDob').addEventListener('change', function() {
+        const dob = new Date(this.value);
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const m = today.getMonth() - dob.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+        document.getElementById('pAge').value = age + ' ans';
+    });
+
+    // ===== Mise à jour signature dynamique =====
+    document.getElementById('pValidePar').addEventListener('input', function() {
+        document.getElementById('sigValidePar').textContent = 'Validé par : ' + this.value;
+    });
+
+    // ===== Collecter les données du formulaire =====
+    function collecterDonnees() {
+        const data = {
+            patient_nom: document.getElementById('pNom').value,
+            patient_prenom: document.getElementById('pPrenom').value,
+            patient_dob: document.getElementById('pDob').value,
+            patient_genre: document.getElementById('pGenre').value,
+            patient_adresse: document.getElementById('pAdresse').value,
+            statut: document.getElementById('pStatut').value,
+            numero: document.getElementById('pNumero').value,
+            preleve_par: document.getElementById('pPrelevePar').value,
+            valide_par: document.getElementById('pValidePar').value,
+            date_prelevement: document.getElementById('pDatePrelev').value,
+            heure_prelevement: document.getElementById('pHeurePrelev').value,
+            date_rendu: document.getElementById('pDateRendu').value,
+            heure_rendu: document.getElementById('pHeureRendu').value,
+            hematologie: {},
+            biochimie: {},
+            serologie: {},
+            urines: {}
+        };
+
+        // Collecter toutes les valeurs des inputs/selects avec data-cat
+        document.querySelectorAll('[data-key][data-cat]').forEach(el => {
+            const cat = el.dataset.cat;
+            const key = el.dataset.key;
+            data[cat][key] = el.value;
+        });
+
+        return data;
+    }
+
+    // ===== Remplir le formulaire avec des données =====
+    function remplirFormulaire(data) {
+        document.getElementById('pNom').value = data.patient_nom || '';
+        document.getElementById('pPrenom').value = data.patient_prenom || '';
+        document.getElementById('pDob').value = data.patient_dob || '';
+        document.getElementById('pGenre').value = data.patient_genre || 'M';
+        document.getElementById('pAdresse').value = data.patient_adresse || '';
+        document.getElementById('pStatut').value = data.statut || 'PRIVE';
+        document.getElementById('pNumero').value = data.numero || '';
+        document.getElementById('pPrelevePar').value = data.preleve_par || '';
+        document.getElementById('pValidePar').value = data.valide_par || '';
+        document.getElementById('pDatePrelev').value = data.date_prelevement || '';
+        document.getElementById('pHeurePrelev').value = data.heure_prelevement || '';
+        document.getElementById('pDateRendu').value = data.date_rendu || '';
+        document.getElementById('pHeureRendu').value = data.heure_rendu || '';
+
+        // Calculer l'âge
+        if (data.patient_dob) {
+            document.getElementById('pDob').dispatchEvent(new Event('change'));
+        }
+
+        // Remplir les résultats
+        const categories = ['hematologie', 'biochimie', 'serologie', 'urines'];
+        categories.forEach(cat => {
+            const catData = (typeof data[cat] === 'string') ? JSON.parse(data[cat] || '{}') : (data[cat] || {});
+            Object.keys(catData).forEach(key => {
+                const el = document.querySelector(`[data-cat="${cat}"][data-key="${key}"]`);
+                if (el) el.value = catData[key] || '';
+            });
+        });
+
+        // Mise à jour signature
+        document.getElementById('sigValidePar').textContent = 'Validé par : ' + (data.valide_par || '');
+    }
+
+    // ===== SAUVEGARDER =====
+    async function sauvegarder() {
+        const data = collecterDonnees();
+        
+        if (!data.patient_nom) {
+            showStatus('⚠️ Veuillez saisir le nom du patient', 'red');
+            return;
+        }
+
+        try {
+            let response;
+            if (currentResultId) {
+                response = await fetch(`/api/lab-results/${currentResultId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            } else {
+                response = await fetch('/api/lab-results', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            }
+
+            const result = await response.json();
+            if (result.success) {
+                if (result.id) currentResultId = result.id;
+                document.getElementById('currentId').textContent = 'ID: ' + currentResultId;
+                showStatus('✅ Sauvegardé avec succès !', '#27ae60');
+            } else {
+                showStatus('❌ Erreur: ' + result.message, 'red');
+            }
+        } catch (e) {
+            showStatus('❌ Erreur réseau: ' + e.message, 'red');
+        }
+    }
+
+    // ===== NOUVEAU =====
+    function nouveauResultat() {
+        if (currentResultId && !confirm('Créer un nouveau résultat ? Les données non sauvegardées seront perdues.')) return;
+        currentResultId = null;
+        document.getElementById('currentId').textContent = '';
+        
+        // Vider tous les champs
+        document.querySelectorAll('.report input, .report select').forEach(el => {
+            if (el.type === 'date' || el.type === 'time' || el.type === 'text') el.value = '';
+            if (el.tagName === 'SELECT') el.selectedIndex = 0;
+        });
+        
+        // Valeurs par défaut
+        document.getElementById('pPrelevePar').value = ' " "';
+        document.getElementById('pValidePar').value = 'Dr" "';
+        document.getElementById('pDatePrelev').value = new Date().toISOString().split('T')[0];
+        document.getElementById('pDateRendu').value = new Date().toISOString().split('T')[0];
+        
+        const now = new Date();
+        document.getElementById('pHeurePrelev').value = now.toTimeString().substring(0,5);
+        document.getElementById('pHeureRendu').value = now.toTimeString().substring(0,5);
+        
+        document.getElementById('sigValidePar').textContent = 'Validé par : Dr " "';
+        showStatus('📝 Nouveau formulaire prêt', '#2e86c1');
+    }
+
+    // ===== CHARGER LISTE =====
+    async function chargerListe() {
+        try {
+            const response = await fetch('/api/lab-results');
+            const results = await response.json();
+            
+            const tbody = document.getElementById('listeResultats');
+            tbody.innerHTML = '';
+            
+            if (results.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;">Aucun résultat enregistré</td></tr>';
+            } else {
+                results.forEach(r => {
+                    tbody.innerHTML += `
+                        <tr onclick="chargerResultat(${r.id})">
+                            <td>${r.id}</td>
+                            <td>${r.patient_nom || ''}</td>
+                            <td>${r.patient_prenom || ''}</td>
+                            <td>${r.date_prelevement || ''}</td>
+                            <td>${r.date_rendu || ''}</td>
+                            <td><button onclick="event.stopPropagation();chargerResultat(${r.id})" 
+                                style="padding:5px 10px;background:#2e86c1;color:white;border:none;border-radius:3px;cursor:pointer;">
+                                📂 Ouvrir</button></td>
+                        </tr>`;
+                });
+            }
+            
+            document.getElementById('modalListe').classList.add('active');
+        } catch (e) {
+            showStatus('❌ Erreur: ' + e.message, 'red');
+        }
+    }
+
+    // ===== CHARGER UN RESULTAT =====
+    async function chargerResultat(id) {
+        try {
+            const response = await fetch(`/api/lab-results/${id}`);
+            const data = await response.json();
+            currentResultId = id;
+            document.getElementById('currentId').textContent = 'ID: ' + id;
+            remplirFormulaire(data);
+            fermerModal();
+            showStatus('✅ Résultat #' + id + ' chargé', '#27ae60');
+        } catch (e) {
+            showStatus('❌ Erreur: ' + e.message, 'red');
+        }
+    }
+
+    // ===== SUPPRIMER =====
+    async function supprimerResultat() {
+        if (!currentResultId) {
+            showStatus('⚠️ Aucun résultat sélectionné', '#f39c12');
+            return;
+        }
+        if (!confirm('Supprimer définitivement ce résultat #' + currentResultId + ' ?')) return;
+        
+        try {
+            await fetch(`/api/lab-results/${currentResultId}`, { method: 'DELETE' });
+            showStatus('🗑️ Résultat supprimé', '#e74c3c');
+            nouveauResultat();
+        } catch (e) {
+            showStatus('❌ Erreur: ' + e.message, 'red');
+        }
+    }
+
+    function fermerModal() {
+        document.getElementById('modalListe').classList.remove('active');
+    }
+
+    function showStatus(msg, color) {
+        const el = document.getElementById('statusMsg');
+        el.textContent = msg;
+        el.style.color = color;
+        setTimeout(() => el.textContent = '', 4000);
+    }
+
+    // ===== INIT =====
+    nouveauResultat();
+</script>
+</body>
+</html>

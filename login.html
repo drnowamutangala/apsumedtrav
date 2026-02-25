@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - APSUMEDTRAV</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-header img {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+        }
+        
+        .login-header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .login-header p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+        
+        .password-wrapper {
+            position: relative;
+        }
+        
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #999;
+            user-select: none;
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
+        }
+        
+        .login-btn:active {
+            transform: translateY(0);
+        }
+        
+        .login-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .error-message {
+            background: #ff6b6b;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            animation: shake 0.5s;
+            font-size: 14px;
+        }
+        
+        .info-message {
+            background: #ffa726;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-size: 14px;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        .remember-me {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .remember-me input {
+            margin-right: 8px;
+        }
+        
+        .remember-me label {
+            color: #666;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .security-badge {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <img src="https://cdn-icons-png.flaticon.com/512/2966/2966327.png" alt="Logo">
+            <h1>APSUMEDTRAV</h1>
+            <p>Fiche d'Aptitude Médicale au Travail</p>
+        </div>
+        
+        <div id="errorMessage" class="error-message"></div>
+        <div id="infoMessage" class="info-message"></div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">👤 Nom d'utilisateur</label>
+                <input type="text" id="username" name="username" required 
+                       autocomplete="username" maxlength="50">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">🔒 Mot de passe</label>
+                <div class="password-wrapper">
+                    <input type="password" id="password" name="password" required 
+                           autocomplete="current-password" maxlength="100">
+                    <span class="toggle-password" onclick="togglePassword()">👁️</span>
+                </div>
+            </div>
+            
+            <div class="remember-me">
+                <input type="checkbox" id="remember" name="remember">
+                <label for="remember">Se souvenir de moi</label>
+            </div>
+            
+            <button type="submit" class="login-btn" id="loginBtn">
+                Se connecter
+            </button>
+        </form>
+
+        <div class="security-badge">
+            🔒 Connexion sécurisée — Données médicales protégées
+        </div>
+    </div>
+
+    <script>
+        // ==================== CONFIGURATION ====================
+        const API_URL = window.location.origin;
+
+        // ==================== VÉRIFIER SESSION EXISTANTE ====================
+        window.onload = function() {
+            // Vérifier si un token valide existe déjà
+            const token = sessionStorage.getItem('authToken');
+            const session = sessionStorage.getItem('userSession');
+            
+            if (token && session) {
+                // Vérifier que le token est encore valide côté serveur
+                fetch(`${API_URL}/api/stats`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                .then(res => {
+                    if (res.ok) {
+                        window.location.href = 'APSUMEDTRAV.html';
+                    } else {
+                        // Token expiré, nettoyer
+                        sessionStorage.removeItem('authToken');
+                        sessionStorage.removeItem('userSession');
+                    }
+                })
+                .catch(() => {
+                    // Serveur non accessible
+                    showError('Serveur non accessible. Vérifiez que le serveur est démarré.');
+                });
+            }
+            
+            // Restaurer le nom d'utilisateur si "Se souvenir" était coché
+            const savedUsername = localStorage.getItem('rememberedUsername');
+            if (savedUsername) {
+                document.getElementById('username').value = savedUsername;
+                document.getElementById('remember').checked = true;
+            }
+        };
+
+        // ==================== GESTION DU FORMULAIRE ====================
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember').checked;
+            const loginBtn = document.getElementById('loginBtn');
+            
+            // Validation basique côté client
+            if (!username || !password) {
+                showError('Veuillez remplir tous les champs');
+                return;
+            }
+            
+            // Désactiver le bouton pendant la requête
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<span class="loading-spinner"></span> Connexion...';
+            hideMessages();
+            
+            try {
+                // 🔒 Authentification via le SERVEUR (pas en local !)
+                const response = await fetch(`${API_URL}/api/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // ✅ Connexion réussie
+                    
+                    // Stocker le token sécurisé
+                    sessionStorage.setItem('authToken', data.token);
+                    
+                    // Stocker les infos utilisateur (sans mot de passe !)
+                    sessionStorage.setItem('userSession', JSON.stringify({
+                        id: data.user.id,
+                        username: data.user.username,
+                        role: data.user.role,
+                        nom: data.user.nom,
+                        prenom: data.user.prenom,
+                        loginTime: new Date().toISOString()
+                    }));
+                    
+                    // Gérer "Se souvenir de moi" (uniquement le username)
+                    if (remember) {
+                        localStorage.setItem('rememberedUsername', username);
+                    } else {
+                        localStorage.removeItem('rememberedUsername');
+                    }
+                    
+                    // Redirection
+                    window.location.href = 'APSUMEDTRAV.html';
+                    
+                } else if (response.status === 429) {
+                    // Trop de tentatives
+                    showError('⚠️ Trop de tentatives. Réessayez dans 15 minutes.');
+                    
+                } else {
+                    // Identifiants incorrects
+                    showError('Nom d\'utilisateur ou mot de passe incorrect');
+                    document.getElementById('password').value = '';
+                    document.getElementById('password').focus();
+                }
+                
+            } catch (error) {
+                // Erreur réseau / serveur non accessible
+                console.error('Erreur de connexion:', error);
+                showError('⚠️ Impossible de contacter le serveur. Vérifiez qu\'il est démarré.');
+            } finally {
+                // Réactiver le bouton
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = 'Se connecter';
+            }
+        });
+
+        // ==================== FONCTIONS UTILITAIRES ====================
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('infoMessage').style.display = 'none';
+            
+            // Masquer après 5 secondes
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function showInfo(message) {
+            const infoDiv = document.getElementById('infoMessage');
+            infoDiv.textContent = message;
+            infoDiv.style.display = 'block';
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        function hideMessages() {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('infoMessage').style.display = 'none';
+        }
+
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.querySelector('.toggle-password');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.textContent = '👁️‍🗨️';
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.textContent = '👁️';
+            }
+        }
+
+        // Empêcher le retour arrière après déconnexion
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                const token = sessionStorage.getItem('authToken');
+                if (!token) {
+                    // Pas de session, rester sur login
+                    document.getElementById('loginForm').reset();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
